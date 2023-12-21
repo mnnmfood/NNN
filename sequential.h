@@ -3,7 +3,12 @@
 
 #include <iostream>
 #include <vector>
+#include <random>
+#include <algorithm>
+#include <chrono>
+
 #include <Eigen/Dense>
+
 #include "activations.h"
 
 using Eigen::Matrix;
@@ -42,10 +47,10 @@ public:
             w_inputs.push_back(new Vector<Scalar, Dynamic>(*it));
 
             weights.push_back(new Matrix<Scalar, Dynamic, Dynamic>(*it, n_last));
-            weights.back()->setConstant(0.5);
+            weights.back()->setRandom();
 
             biases.push_back(new Vector<Scalar, Dynamic>(*it));
-            biases.back()->setConstant(0.5);
+            biases.back()->setRandom();
 
             nabla_b.push_back(new Vector<Scalar, Dynamic>(*it));
             nabla_w.push_back(new Matrix<Scalar, Dynamic, Dynamic>(*it, n_last));
@@ -80,39 +85,80 @@ public:
         *nabla_b.back() = *delta.back();
         *nabla_w.back() = *delta.back() * (*activations[num_layers-2]).transpose();
 #if 1
-        std::cout << "Sizes: " << delta.size() << " " << num_layers << "\n";
-        std::cout << "LOOP" << '\n';
-        std::cout << *nabla_b[num_layers-2] << "\n\n"; 
-        std::cout << *nabla_w[num_layers-2] << "\n\n";
         for(int i{3}; i < num_layers+1; i++){
             *delta[num_layers-i] = ((*weights[num_layers -i + 1]).transpose() * 
                 (*delta[num_layers - i + 1]))
                 .cwiseProduct( (activationFun->activation_prime(
                     *w_inputs[num_layers - i])) );
 
-            *nabla_b[num_layers-i] = *(delta[num_layers - i]);
-            *nabla_w[num_layers-i] = *(delta[num_layers - i]) * 
+            *nabla_b[num_layers-i] += *(delta[num_layers - i]);
+            *nabla_w[num_layers-i] += *(delta[num_layers - i]) * 
                 ((*activations[num_layers - i]).transpose());
         }
 #endif
     }
 
-    void updateBatch(const std::vector<Vector<Scalar, Dynamic>*>& x, 
-                 const std::vector<Vector<Scalar, Dynamic>*>& y, Scalar lr){
-        size_t batch_size = x.size();
-        for(size_t i{0}; i < batch_size; i++){
-            backProp(*x[i], *y[i]);        
-        }
+    void SGD(const std::vector<Vector<Scalar, Dynamic>*>& x, 
+                 const std::vector<Vector<Scalar, Dynamic>*>& y, 
+                 int epochs, int batch_size, Scalar lr){
 
-        for(int i{0}; i < num_layers-1; i++){
-            *weights[i] -= (lr / batch_size) * *nabla_w[i];
-            *biases[i] -= (lr / batch_size) * *nabla_b[i];
+        size_t train_size = x.size();
+
+        // Prepare random generator
+        std::random_device rd;
+        std::mt19937 g(rd());
+
+        std::vector<int> indices;
+        for(int i{0}; i < train_size; i++){indices.push_back(i);} 
+
+        double cost_t;
+
+        for(int k{0}; k < epochs; k++){
+            cost_t = 0;
+
+            // Get random subsample
+            std::shuffle(indices.begin(), indices.end(), g);
+            for(size_t i{0}; i < batch_size; i++){
+                backProp(*x[indices[i]], *y[indices[i]]);        
+            }
+
+            for(int i{0}; i < num_layers-1; i++){
+                *weights[i] -= (lr / batch_size) * *nabla_w[i];
+                *biases[i] -= (lr / batch_size) * *nabla_b[i];
+            }
+            
+            for(size_t i{1}; i < batch_size; i++){
+                feedFwd(*x[indices[train_size - i]]);
+                cost_t += cost(*y[indices[train_size - i]]);
+            }
+            std::cout << "Cost " << k << " :" << cost_t / batch_size << "\n";
         }
     }
 
     Vector<Scalar, Dynamic> cost_grad(const Vector<Scalar, Dynamic>& y){
         return *activations.back() - y;
     } 
+
+    Scalar cost(const Vector<Scalar, Dynamic>& y){
+        return (*activations.back() - y).squaredNorm();
+    }
+
+    Scalar accuracy(const std::vector<Vector<Scalar, Dynamic>*>& x, 
+                    const std::vector<Vector<Scalar, Dynamic>*>& y){
+        size_t test_size{x.size()};
+        std::cout << "Test size " << test_size << "\n";
+        int pred, test; 
+        int sum{0};
+        for(size_t i{0}; i < test_size; i++){
+            feedFwd(*x[i]);
+            activations.back()->maxCoeff(&pred);
+            y[i]->maxCoeff(&test);
+            std::cout << "Test: " << i << " :" << test << " Prediction: " << pred << "\n";
+
+            sum += (pred==test);
+        }
+        return static_cast<Scalar>(sum) / static_cast<Scalar>(test_size);
+    }
 
     Vector<Scalar, Dynamic> getLayer(int i){
         return *activations[i];

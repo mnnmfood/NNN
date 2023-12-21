@@ -39,15 +39,15 @@ int load_csv(std::string fpath,
             x_data.push_back(v);
             temp.clear();
 
-            lines+=1;
-            if(lines > 9)
+            if(lines > 20)
                 break;
+            lines+=1;
         }
     } catch(const std::exception& exception){
             fin.close();
             return 0;
     }
-
+    std::cout << "Samples: " << lines << '\n';
     fin.close();
     return 1;
 }
