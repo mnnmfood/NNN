@@ -1,0 +1,6 @@
+python/
+.vscode/
+
+*.zip
+*.gz
+*.csv
