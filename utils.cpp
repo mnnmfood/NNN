@@ -9,11 +9,10 @@
 
 using Eigen::Matrix;
 using Eigen::Vector;
+using Eigen::Map;
 using Eigen::Dynamic;
 
-
-int load_csv(std::string fpath, 
-            std::vector<Vector<double, Dynamic>*>& x_data){ 
+int load_csv(std::string fpath, Matrix<double, Dynamic, Dynamic>& data){
     std::ifstream fin;
     fin.open(fpath);
     std::string line, word; 
@@ -26,29 +25,25 @@ int load_csv(std::string fpath,
             std::getline(fin, line); 
             std::stringstream s(line);
 
-            size_t l{0};
             while(std::getline(s, word, ',')){
                 temp.push_back(std::stod(word));
-                l += 1;
             }
 
-            Vector<double, Dynamic>* v = new Vector<double, Dynamic>(l);
-            for(int i{0}; i < l; i++){
-                (*v)[i] = temp[i];
-            }
-            x_data.push_back(v);
-            temp.clear();
-
-            if(lines > 20)
-                break;
             lines+=1;
+
+            if(lines > 19)
+                break;
         }
     } catch(const std::exception& exception){
             fin.close();
             return 0;
     }
+
     std::cout << "Samples: " << lines << '\n';
     fin.close();
+    data = Map<Matrix<double, Dynamic, Dynamic>>(temp.data(), 
+           lines, temp.size()/lines);
+    // Each column is a sample
+    data.transposeInPlace();
     return 1;
 }
-
