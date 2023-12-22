@@ -31,7 +31,7 @@ int load_csv(std::string fpath, Matrix<double, Dynamic, Dynamic>& data){
 
             lines+=1;
 
-            if(lines > 19)
+            if(lines > 100)
                 break;
         }
     } catch(const std::exception& exception){

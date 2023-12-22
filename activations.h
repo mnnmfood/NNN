@@ -21,7 +21,7 @@ public:
 
 template<typename Scalar>
 Scalar logistic(Scalar z){
-    return Dynamic / (Dynamic + std::exp(-z));
+    return 1.0 / (1.0 + std::exp(-z));
 }
 
 template<typename Scalar> 

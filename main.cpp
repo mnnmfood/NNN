@@ -5,7 +5,7 @@
 #include <Eigen/Dense>
 #include "activations.h"
 #include "utils.h"
-#include "sequential2.h"
+#include "sequential.h"
 #include "tests.h"
 
 using Eigen::Matrix;
@@ -26,20 +26,20 @@ int main(){
     std::cout << "Shape x: " << y.rows() << ", " << y.cols()<< '\n';
 
     // network architecture
-    std::vector<int> arch {784, 256, 10};
+    std::vector<int> arch {784, 128, 64, 10};
     Sequential<double> model(arch, new Logistic<double>());
     std::cout << model << '\n';
 
-#if 0
-    model.SGD(x, y, 200, x.size(), 0.2);
+    //model.SGD(x, y, 200, 100, 0.1);
+    model.GD(x, y, 200, 0.9);
 
     std::cout << std::setprecision(2);
-    std::cout << "Accuracy"  << model.accuracy(x, y);
-#endif
+    std::cout << "Accuracy"  << model.accuracy(x, y) << "\n\n";
 
 #ifdef TESTING
     std::cout << "TESTING" << "\n\n";
     testSequentialInit();
     testFeedFwd();
+    testBackProp();
 #endif
 }
