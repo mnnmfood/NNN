@@ -4,12 +4,14 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <cmath>
 #include <algorithm>
 #include <chrono>
 
 #include <Eigen/Dense>
 
 #include "activations.h"
+#include "costs.h"
 
 using Eigen::Matrix;
 using Eigen::seqN;
@@ -17,6 +19,15 @@ using Eigen::all;
 using Eigen::last;
 using Eigen::Vector;
 using Eigen::Dynamic;
+
+std::random_device rd{};
+std::mt19937 gen{rd()};
+std::normal_distribution<double> nd{0, 1};
+
+template<typename Scalar>
+Scalar normal_distribution(){
+    return static_cast<Scalar>(nd(gen));
+}
 
 template<typename Scalar>
 class Sequential
@@ -38,22 +49,31 @@ public:
 
     ActivationFun<Scalar>* activationFun;
 
+    CostFun<Scalar>* costFun;
+
 public:
     Sequential() = delete;
-    Sequential(std::vector<int>& arch_in, ActivationFun<Scalar>* a)
+    Sequential(std::vector<int>& arch_in, ActivationFun<Scalar>* a, CostFun<Scalar>* c)
     {
         arch = arch_in;
         activationFun = a;
+        costFun = c;
         num_layers = arch.size();
         int n_last{arch.front()};
 
         for(std::vector<int>::iterator it {arch.begin() + 1}; it != arch.end(); it++){
 
             weights.push_back(new Matrix<Scalar, Dynamic, Dynamic>(*it, n_last));
-            weights.back()->setRandom();
+            //weights.back()->setRandom();
+            //*weights.back() = Matrix<Scalar, Dynamic, Dynamic>::Random(*it, n_last);
+            *weights.back() = (*weights.back()).NullaryExpr(*it, n_last,
+                std::ref(normal_distribution<Scalar>));
 
             biases.push_back(new Vector<Scalar, Dynamic>(*it));
-            biases.back()->setRandom();
+            //*biases.back() = Vector<Scalar, Dynamic>::Random(*it);
+            *biases.back() = (*biases.back()).NullaryExpr(*it,
+                std::ref(normal_distribution<Scalar>));
+            //biases.back()->setRandom();
 
             nabla_b.push_back(new Vector<Scalar, Dynamic>(*it));
             nabla_w.push_back(new Matrix<Scalar, Dynamic, Dynamic>(*it, n_last));
@@ -79,12 +99,13 @@ public:
                  const Matrix<Scalar, Dynamic, Dynamic>& y){
         feedFwd(x);
 
-
-        *delta.back() = cost_grad(y).cwiseProduct(
+        //*delta.back() = costFun->grad(*activations.back(), y).cwiseProduct(
+        //        activationFun->activation_prime(*w_inputs.back()));
+        *delta.back() = costFun->grad(*activations.back(), y,
                 activationFun->activation_prime(*w_inputs.back()));
+
         *nabla_b.back() = (*delta.back()).rowwise().sum();
         *nabla_w.back() = *delta.back() * (*activations[num_layers-2]).transpose();
-
 
 
         for(int i{3}; i < num_layers+1; i++){
@@ -126,9 +147,32 @@ public:
                 *biases[i] -= (lr / n_samples) * *nabla_b[i];
             }
 
-            feedFwd(x);
-            cost_t = cost(y);
-            std::cout << "Cost " << k << " :" << cost_t / n_samples << "\n";
+            //feedFwd(x);
+            //cost_t = costFun->cost(*activations.back(), y);
+            //std::cout << "Cost " << k << " :" << cost_t / n_samples << "\n";
+        }
+    }
+        void GD(Matrix<Scalar, Dynamic, Dynamic>& x,
+            Matrix<Scalar, Dynamic, Dynamic>& y, 
+            int epochs, Scalar lr,
+            Matrix<Scalar, Dynamic, Dynamic>& val_x,
+            Matrix<Scalar, Dynamic, Dynamic>& val_y){
+        Scalar n_samples = static_cast<Scalar>(x.cols());
+        initGD(n_samples);
+
+        double cost_t{0};
+        for(int k{0}; k < epochs; k++){
+            backProp(x, y);
+
+            for(int i{0}; i < num_layers-1; i++){
+                *weights[i] -= (lr / n_samples) * *nabla_w[i];
+                *biases[i] -= (lr / n_samples) * *nabla_b[i];
+            }
+
+            //feedFwd(x);
+            //cost_t = costFun->cost(*activations.back(), y);
+            cost_t = accuracy(val_x, val_y);
+            std::cout << "Accuracy " << k << " :" << cost_t << "\n";
         }
     }
 
@@ -140,8 +184,6 @@ public:
         initGD(batch_size);
 
         // Prepare generator of random indices 
-        std::random_device rd;
-        std::mt19937 g(rd());
         std::vector<int> indices;
         std::vector<int> sub_indices(batch_size);
         for(int i{0}; i < train_size; i++){indices.push_back(i);} 
@@ -151,7 +193,7 @@ public:
         for(int k{0}; k < epochs; k++){
 
             // Get random subsample
-            std::shuffle(indices.begin(), indices.end(), g);
+            std::shuffle(indices.begin(), indices.end(), gen);
             std::copy_n(indices.begin(), batch_size, sub_indices.begin());
             backProp(x(all, sub_indices), y(all, sub_indices));
 
@@ -159,19 +201,47 @@ public:
                 *weights[i] -= (lr / batch_size) * *nabla_w[i];
                 *biases[i] -= (lr / batch_size) * *nabla_b[i];
             }
-            
+
             feedFwd(x(all, sub_indices));
-            cost_t = cost(y(all, sub_indices));
+            cost_t = costFun->cost(*activations.back(), y(all, sub_indices));
+            //cost_t = accuracy(val_x, val_y);
             std::cout << "Cost " << k << " :" << cost_t / batch_size << "\n";
         }
     }
 
-    Matrix<Scalar, Dynamic, Dynamic> cost_grad(const Matrix<Scalar, Dynamic, Dynamic>& y){
-        return *activations.back() - y;
-    } 
+    void SGD(Matrix<Scalar, Dynamic, Dynamic>& x,
+             Matrix<Scalar, Dynamic, Dynamic>& y, 
+            int epochs, int batch_size, Scalar lr, 
+            Matrix<Scalar, Dynamic, Dynamic>& val_x,
+            Matrix<Scalar, Dynamic, Dynamic>&val_y){
 
-    Scalar cost(const Matrix<Scalar, Dynamic, Dynamic>& y){
-        return (*activations.back() - y).colwise().squaredNorm().sum();
+        size_t train_size = x.cols();
+        initGD(batch_size);
+
+        // Prepare random indices 
+        std::vector<int> indices;
+        std::vector<int> sub_indices(batch_size);
+        for(int i{0}; i < train_size; i++){indices.push_back(i);} 
+
+        double cost_t;
+        for(int k{0}; k < epochs; k++){
+
+            // Get random subsample
+            std::shuffle(indices.begin(), indices.end(), gen);
+            for(int l{0}; l < train_size-batch_size; l+=batch_size){
+                std::copy_n(indices.begin()+l, batch_size, sub_indices.begin());
+                backProp(x(all, sub_indices), y(all, sub_indices));
+                for(int i{0}; i < num_layers-1; i++){
+                    *weights[i] -= (lr / batch_size) * *nabla_w[i];
+                    *biases[i] -= (lr / batch_size) * *nabla_b[i];
+                }
+
+                //cost_t = costFun->cost(*activations.back(), y(all, sub_indices));
+            }
+
+            cost_t = accuracy(val_x, val_y);
+            std::cout << "Cost " << k << " :" << cost_t << "\n";
+        }
     }
 
     Scalar accuracy(const Matrix<Scalar, Dynamic, Dynamic>& x,
@@ -183,13 +253,12 @@ public:
         int y_test, y_pred;
         int sum{0};
         for(Eigen::Index i{0}; i < test_size; i++){
-            y.col(i).maxCoeff(&y_test);
+            //y.col(i).maxCoeff(&y_test);
             (*activations.back()).col(i).maxCoeff(&y_pred);
-            std::cout << "Test: " << i << " :" << y_test << 
-                " Prediction: " << y_pred << "\n";
-            sum += (y_test == y_pred);
+            //std::cout << "Test: " << i << " :" << y_test << 
+            //    " Prediction: " << y_pred << "\n";
+            sum += (static_cast<int>(y(0, i)) == y_pred);
         }
-
         return static_cast<Scalar>(sum) / static_cast<Scalar>(test_size);
     }
 

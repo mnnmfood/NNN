@@ -8,6 +8,7 @@ using Eigen::Matrix;
 using Eigen::Vector;
 using Eigen::Dynamic;
 
+int load_csv(std::string fpath, Matrix<float, Dynamic, Dynamic>& data);
 int load_csv(std::string fpath, Matrix<double, Dynamic, Dynamic>& data);
 
 #endif
