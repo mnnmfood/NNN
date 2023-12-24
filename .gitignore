@@ -1,6 +1,8 @@
 python/
 .vscode/
+.build/*
+!build/.gitkeep 
 
+*.exe
 *.zip
 *.gz
-*.csv
