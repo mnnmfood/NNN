@@ -1,8 +1,0 @@
-[
-{
-  "directory": "E:/NoviceNeuralNetworks/NNN/build",
-  "command": "C:\\MinGW2\\mingw64\\bin\\g++.exe  @CMakeFiles/tests.dir/includes_CXX.rsp -g -o CMakeFiles\\tests.dir\\tests\\main.cpp.obj -c E:\\NoviceNeuralNetworks\\NNN\\tests\\main.cpp",
-  "file": "E:/NoviceNeuralNetworks/NNN/tests/main.cpp",
-  "output": "CMakeFiles/tests.dir/tests/main.cpp.obj"
-}
-]

@@ -9,6 +9,8 @@ option(TESTING "Create test executable" ON)
 if(TESTING)
     add_executable(tests tests/main.cpp)
     find_path(EIGEN_LIB Eigen)
+    set(GCC_FLAGS "-DNDEBUG;-ffast-math;-O2;-DFLAGSET")
+    target_compile_options(tests PUBLIC "${GCC_FLAGS}")
 
     target_include_directories(tests PUBLIC
                             "${PROJECT_BINARY_DIR}"

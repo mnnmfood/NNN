@@ -14,7 +14,9 @@ using Eigen::Dynamic;
 using Eigen::Vector;
 
 int main(){
-
+#ifdef FLAGSET
+    std::cout << "Flags set\n\n";
+#endif
     std::cout << "--TESTING Mnist Data" << "\n";
     std::string dataDir {"../data/mnist/"};
     //#std::vector<Vector<float, Dynamic>*> x;
@@ -35,11 +37,11 @@ int main(){
     std::cout << "Shape y: " << val_y.rows() << ", " << val_y.cols()<< '\n';
 
     // network architecture
-    std::vector<int> arch {784, 30, 10};
+    std::vector<int> arch {784, 512, 30, 10};
     Sequential<float> model(arch, new Logistic<float>(), new CrossEntropy<float>());
     std::cout << model << '\n';
 
-    model.SGD(x, y, 20, 10, 0.5, val_x, val_y);
+    model.SGD(x, y, 100, 10, 0.5, val_x, val_y);
     //model.GD(x, y, 10, 0.5, val_x, val_y);
     //model.GD(x, y, 30, 0.5);
 

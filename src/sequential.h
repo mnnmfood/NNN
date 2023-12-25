@@ -220,7 +220,7 @@ public:
 
         double cost_t;
         for(int k{0}; k < epochs; k++){
-
+            auto start = std::chrono::high_resolution_clock::now();
             // Get random subsample
             std::shuffle(indices.begin(), indices.end(), gen);
             for(int l{0}; l < train_size-batch_size; l+=batch_size){
@@ -235,8 +235,10 @@ public:
             }
 
             cost_t = accuracy(val_x, val_y);
-            std::cout << "Epoch " << k << " :" << cost_t*100  ;
+            std::cout << "Epoch " << k << " :" << cost_t*100; 
             std::cout << " %" << "\n";
+            auto finish = std::chrono::high_resolution_clock::now();
+            std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count() << "ms\n";
         }
     }
 
