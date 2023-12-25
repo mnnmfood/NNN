@@ -39,12 +39,12 @@ int main(){
     Sequential<float> model(arch, new Logistic<float>(), new CrossEntropy<float>());
     std::cout << model << '\n';
 
-    model.SGD(x, y, 5, 10, 0.5, val_x, val_y);
+    model.SGD(x, y, 20, 10, 0.5, val_x, val_y);
     //model.GD(x, y, 10, 0.5, val_x, val_y);
     //model.GD(x, y, 30, 0.5);
 
     std::cout << std::setprecision(2);
-    std::cout << "Final accuracy "  << model.accuracy(val_x, val_y);
+    std::cout << "Final accuracy "  << model.accuracy(val_x, val_y)*100;
     std::cout << "%" << "\n\n";
 
     std::cout << "--TESTING INIT" << "\n";

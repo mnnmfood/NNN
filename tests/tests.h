@@ -5,8 +5,8 @@
 #include "activations.h"
 #include "costs.h"
 
-void printShape(Matrix<double, Dynamic, Dynamic>* a){ 
-    std::cout << " Shape: (" << a->rows() << ", " << a->cols() << ")\n";
+void printShape(Matrix<double, Dynamic, Dynamic>& a){ 
+    std::cout << " Shape: (" << a.rows() << ", " << a.cols() << ")\n";
 }
 
 void testSequentialInit(){
@@ -33,11 +33,11 @@ void testFeedFwd(){
     std::cout << "Input layer ";
     printShape(model.activations[0]);
     std::cout << "Input ";
-    printShape(&x);
+    printShape(x);
 
     model.feedFwd(x);
     std::cout << "Input: \n" << x << "\n\n";
-    std::cout << "Output: \n" << *model.activations.back() << "\n\n";
+    std::cout << "Output: \n" << model.activations.back() << "\n\n";
 }
 
 void testBackProp(){
@@ -56,18 +56,18 @@ void testBackProp(){
     for(int i{0}; i < n_samples; i++){y.col(i) = yi;}
 
     std::cout << "Output: \n" << y << "\n\n";
-    std::cout << "Prediction: \n" << *model.activations.back() << "\n\n";
+    std::cout << "Prediction: \n" << model.activations.back() << "\n\n";
 
     model.backProp(x, y);
     for(int i{0}; i < model.num_layers-1; i++){
-        *(model.weights[i]) -= (0.9 / n_samples) * (*model.nabla_w[i]);
-        *(model.biases[i]) -= (0.9 / n_samples) * (*model.nabla_b[i]);
+        model.weights[i] -= (0.9 / n_samples) * (model.nabla_w[i]);
+        model.biases[i] -= (0.9 / n_samples) * (model.nabla_b[i]);
     }
 
     model.feedFwd(x);
 
     std::cout << "Output: \n" << y << "\n\n";
-    std::cout << "Prediction: \n" << *model.activations.back() << "\n\n";
+    std::cout << "Prediction: \n" << model.activations.back() << "\n\n";
 }
 
 #endif
