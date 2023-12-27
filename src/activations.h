@@ -26,7 +26,8 @@ Scalar logistic(Scalar z){
 
 template<typename Scalar> 
 Scalar logistic_prime(Scalar z){
-    return (1.0 - logistic(z))*logistic(z);
+    Scalar log = 1.0 / (1.0 + std::exp(-z));
+    return (1.0 - log)*log;
 }
 
 template<typename Scalar>
@@ -41,6 +42,34 @@ public:
 
     Matrix<Scalar, Dynamic, Dynamic> activation_prime(const Matrix<Scalar, Dynamic, Dynamic>& z) override{
         return z.unaryExpr(std::ref(logistic_prime<Scalar>));
+    }
+};
+
+template<typename Scalar>
+Scalar tanhc(Scalar z){
+    return std::tanh(z);
+}
+
+template<typename Scalar> 
+Scalar tanh_prime(Scalar z){
+    Scalar th = std::tanh(z);
+    return 1.0 - th * th;
+}
+
+
+
+template<typename Scalar>
+class Tanh: public ActivationFun<Scalar>
+{
+public:
+    Tanh(){};
+
+    Matrix<Scalar, Dynamic, Dynamic> activation(const Matrix<Scalar, Dynamic, Dynamic>& z) override{
+        return z.unaryExpr(std::ref(tanhc<Scalar>));
+    }
+
+    Matrix<Scalar, Dynamic, Dynamic> activation_prime(const Matrix<Scalar, Dynamic, Dynamic>& z) override{
+        return z.unaryExpr(std::ref(tanh_prime<Scalar>));
     }
 };
 

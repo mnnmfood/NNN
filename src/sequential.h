@@ -22,12 +22,20 @@ using Eigen::Dynamic;
 
 std::random_device rd{};
 std::mt19937 gen{rd()};
-std::normal_distribution<double> nd{0, 1};
+
 
 template<typename Scalar>
-Scalar normal_distribution(){
-    return static_cast<Scalar>(nd(gen));
-}
+class NormalSample
+{
+    std::normal_distribution<double> nd;
+public:
+    NormalSample(double mean, double std): nd{mean, std}{}
+    Scalar operator()(){return static_cast<Scalar>(nd(gen));}
+};
+
+//Scalar normal_distribution(std::normal_distribution<double> nd){
+//    return static_cast<Scalar>(nd(gen));
+//}
 
 template<typename Scalar>
 class Sequential
@@ -54,25 +62,25 @@ public:
 public:
     Sequential() = delete;
     Sequential(std::vector<int>& arch_in, ActivationFun<Scalar>* a, CostFun<Scalar>* c)
+        :arch {arch_in}, activationFun {a}, costFun {c}
     {
-        arch = arch_in;
-        activationFun = a;
-        costFun = c;
-        num_layers = arch.size();
+        num_layers = static_cast<int>(arch.size());
         int n_last{arch.front()};
 
         for(std::vector<int>::iterator it {arch.begin() + 1}; it != arch.end(); it++){
+
+            NormalSample<Scalar> sampleFun(0, 1 / std::sqrt(n_last));
 
             weights.push_back( Matrix<Scalar, Dynamic, Dynamic>(*it, n_last));
             //weights.back()->setRandom();
             //weights.back() = Matrix<Scalar, Dynamic, Dynamic>::Random(*it, n_last);
             weights.back() = (weights.back()).NullaryExpr(*it, n_last,
-                std::ref(normal_distribution<Scalar>));
+                std::ref(sampleFun));
 
             biases.push_back( Vector<Scalar, Dynamic>(*it));
             //biases.back() = Vector<Scalar, Dynamic>::Random(*it);
             biases.back() = (biases.back()).NullaryExpr(*it,
-                std::ref(normal_distribution<Scalar>));
+                std::ref(sampleFun));
             //biases.back()->setRandom();
 
             nabla_b.push_back( Vector<Scalar, Dynamic>(*it));
@@ -134,7 +142,7 @@ public:
 
     void GD(Matrix<Scalar, Dynamic, Dynamic>& x,
             Matrix<Scalar, Dynamic, Dynamic>& y, 
-            int epochs, Scalar lr){
+            int epochs, Scalar lr, Scalar eta){
         Scalar n_samples = static_cast<Scalar>(x.cols());
         initGD(n_samples);
 
@@ -143,14 +151,15 @@ public:
             backProp(x, y);
 
             for(int i{0}; i < num_layers-1; i++){
-                weights[i] -= (lr / n_samples) * nabla_w[i];
+                weights[i] = weights[i].eval()*(1 - lr*eta/n_samples) - 
+                    (lr / n_samples) * nabla_w[i];
                 biases[i] -= (lr / n_samples) * nabla_b[i];
             }
         }
     }
         void GD(Matrix<Scalar, Dynamic, Dynamic>& x,
             Matrix<Scalar, Dynamic, Dynamic>& y, 
-            int epochs, Scalar lr,
+            int epochs, Scalar lr, Scalar eta,
             Matrix<Scalar, Dynamic, Dynamic>& val_x,
             Matrix<Scalar, Dynamic, Dynamic>& val_y){
         Scalar n_samples = static_cast<Scalar>(x.cols());
@@ -161,7 +170,8 @@ public:
             backProp(x, y);
 
             for(int i{0}; i < num_layers-1; i++){
-                weights[i] -= (lr / n_samples) * nabla_w[i];
+                weights[i] = weights[i].eval()*(1 - lr*eta/n_samples) - 
+                    (lr / n_samples) * nabla_w[i];
                 biases[i] -= (lr / n_samples) * nabla_b[i];
             }
 
@@ -173,7 +183,7 @@ public:
 
     void SGD(Matrix<Scalar, Dynamic, Dynamic>& x,
              Matrix<Scalar, Dynamic, Dynamic>& y, 
-            int epochs, int batch_size, Scalar lr){
+            int epochs, int batch_size, Scalar lr, Scalar eta){
 
         size_t train_size = x.cols();
         initGD(batch_size);
@@ -193,8 +203,10 @@ public:
             backProp(x(all, sub_indices), y(all, sub_indices));
 
             for(int i{0}; i < num_layers-1; i++){
-                weights[i] -= (lr / batch_size) * nabla_w[i];
+                weights[i] = weights[i].eval()*(1 - lr*eta/batch_size) - 
+                    (lr / batch_size) * nabla_w[i];
                 biases[i] -= (lr / batch_size) * nabla_b[i];
+
             }
 
             feedFwd(x(all, sub_indices));
@@ -206,7 +218,7 @@ public:
 
     void SGD(Matrix<Scalar, Dynamic, Dynamic>& x,
              Matrix<Scalar, Dynamic, Dynamic>& y, 
-            int epochs, int batch_size, Scalar lr, 
+            int epochs, int batch_size, Scalar lr, Scalar eta,
             Matrix<Scalar, Dynamic, Dynamic>& val_x,
             Matrix<Scalar, Dynamic, Dynamic>&val_y){
 
@@ -227,7 +239,8 @@ public:
                 std::copy_n(indices.begin()+l, batch_size, sub_indices.begin());
                 backProp(x(all, sub_indices), y(all, sub_indices));
                 for(int i{0}; i < num_layers-1; i++){
-                    weights[i] -= (lr / batch_size) * nabla_w[i];
+                    weights[i] = weights[i].eval()*(1 - lr*eta/batch_size) - 
+                        (lr / batch_size) * nabla_w[i];
                     biases[i] -= (lr / batch_size) * nabla_b[i];
                 }
 

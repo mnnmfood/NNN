@@ -39,11 +39,11 @@ int main(){
     // network architecture
     std::vector<int> arch {784, 512, 30, 10};
     Sequential<float> model(arch, new Logistic<float>(), new CrossEntropy<float>());
+    //Sequential<float> model(arch, new Tanh<float>(), new MSE<float>());
     std::cout << model << '\n';
 
-    model.SGD(x, y, 100, 10, 0.5, val_x, val_y);
-    //model.GD(x, y, 10, 0.5, val_x, val_y);
-    //model.GD(x, y, 30, 0.5);
+    model.SGD(x, y, 10, 10, 0.5, 0.01, val_x, val_y);
+    //model.GD(x, y, 10, 0.5, 0.01, val_x, val_y);
 
     std::cout << std::setprecision(2);
     std::cout << "Final accuracy "  << model.accuracy(val_x, val_y)*100;
