@@ -41,7 +41,7 @@ template<typename Scalar>
 class Sequential
 {
 public:
-    int num_layers{};
+    size_t num_layers{};
     std::vector<int> arch;
 
     std::vector<Matrix<Scalar, Dynamic, Dynamic>> weights;
@@ -68,7 +68,7 @@ public:
                 bool use_softmax=true)
         :arch {arch_in}, costFun {&c}
     {
-        num_layers = static_cast<int>(arch.size());
+        num_layers = arch.size();
         int n_last{arch.front()};
 
         for(std::vector<int>::iterator it {arch.begin() + 1}; it != arch.end(); it++){
@@ -93,7 +93,9 @@ public:
             activationFun.push_back(&a);
             n_last = *it;
         }
+        std::cout << "fun layers" << activationFun.size() << "\n";
         if(use_softmax){
+            std::cout << "fun layers" << activationFun.size() << "\n";
             activationFun.back() = new SoftMax<Scalar>();
         }
     }
@@ -123,9 +125,9 @@ public:
         nabla_w.back() = delta.back() * (activations[num_layers-2]).transpose();
 
 
-        for(int i{3}; i < num_layers+1; i++){
+        for(size_t i{3}; i < num_layers+1; i++){
             delta[num_layers-i] = ((weights[num_layers -i + 1]).transpose() * 
-                delta[num_layers - i + 1]).cwiseProduct(activationFun[num_layers - i + 1]->
+                delta[num_layers - i + 1]).cwiseProduct(activationFun[num_layers - i]->
                 activation_prime(w_inputs[num_layers - i]));
 
             nabla_b[num_layers-i] = (delta[num_layers-i]).rowwise().sum();
@@ -137,7 +139,7 @@ public:
     void initGD(size_t n_samples){
         activations.push_back(
              Matrix<Scalar, Dynamic, Dynamic>(arch[0], n_samples));
-        for(int i{1}; i < num_layers; i++){
+        for(size_t i{1}; i < num_layers; i++){
             delta.push_back(
                  Matrix<Scalar, Dynamic, Dynamic>(arch[i], n_samples));
             activations.push_back(
@@ -235,17 +237,17 @@ public:
         // Prepare random indices 
         std::vector<int> indices;
         std::vector<int> sub_indices(batch_size);
-        for(int i{0}; i < train_size; i++){indices.push_back(i);} 
+        for(size_t i{0}; i < train_size; i++){indices.push_back(i);} 
 
         double cost_t;
         for(int k{0}; k < epochs; k++){
             auto start = std::chrono::high_resolution_clock::now();
             // Get random subsample
             std::shuffle(indices.begin(), indices.end(), gen);
-            for(int l{0}; l < train_size-batch_size; l+=batch_size){
+            for(size_t l{0}; l < train_size-batch_size; l+=batch_size){
                 std::copy_n(indices.begin()+l, batch_size, sub_indices.begin());
                 backProp(x(all, sub_indices), y(all, sub_indices));
-                for(int i{0}; i < num_layers-1; i++){
+                for(size_t i{0}; i < num_layers-1; i++){
                     weights[i] = weights[i].eval()*(1 - lr*eta/batch_size) - 
                         (lr / batch_size) * nabla_w[i];
                     biases[i] -= (lr / batch_size) * nabla_b[i];
@@ -268,13 +270,13 @@ public:
         Eigen::Index test_size{x.cols()};
         feedFwd(x);
 
-        int y_test, y_pred;
+        int y_pred;
         int sum{0};
         for(Eigen::Index i{0}; i < test_size; i++){
             //y.col(i).maxCoeff(&y_test);
             (activations.back()).col(i).maxCoeff(&y_pred);
-            //std::cout << "Test: " << i << " :" << y_test << 
-            //    " Prediction: " << y_pred << "\n";
+            //std::cout << y_pred << "\n";
+            //std::cout << activations.back().col(i) << "\n\n";
             sum += (static_cast<int>(y(0, i)) == y_pred);
         }
         return static_cast<Scalar>(sum) / static_cast<Scalar>(test_size);
@@ -288,7 +290,7 @@ public:
         out << "Layer" << '\t' << "Nodes" << '\t' << "Weights" << '\n';
         size_t l = model.weights.size();
         out << 0 << '\t' << model.weights[0].cols() << '\t' << 0 << '\n';
-        for(int i{0}; i < l; i++){
+        for(size_t i{0}; i < l; i++){
             out << i+1 << '\t' << model.biases[i].size() << 
             '\t' << model.weights[i].size() << '\n';
         }

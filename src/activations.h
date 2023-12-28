@@ -109,7 +109,6 @@ class SoftMax: public ActivationFun<Scalar>
         for(int i{0}; i < res.cols(); i++){
             res.col(i) = z.col(i).unaryExpr(usrExp<Scalar>(temp_sum(i) + temp_max(i)));
         }
-
         return res;
     }
 
@@ -128,7 +127,6 @@ class SoftMax: public ActivationFun<Scalar>
         }
         return  res - res.cwiseProduct(res); 
     }
-
 };
 
 #endif

@@ -37,14 +37,14 @@ int main(){
     std::cout << "Shape y: " << val_y.rows() << ", " << val_y.cols()<< '\n';
 
     // network architecture
-    std::vector<int> arch {784, 30, 10};
-    Logistic<float> log;
-    CrossEntropy<float> cross;
-    Sequential<float> model(arch, log, cross, false);
+    std::vector<int> arch {784, 30, 30, 10};
+    Logistic<float> activ;
+    MSE<float> cost;
+    Sequential<float> model(arch, activ, cost, true);
     //Sequential<float> model(arch, new Tanh<float>(), new MSE<float>());
     std::cout << model << '\n';
 
-    model.SGD(x, y, 10, 10, 0.5, 0.01, val_x, val_y);
+    model.SGD(x, y, 10, 10, 0.5, 0.00, val_x, val_y);
     //model.GD(x, y, 10, 0.5, 0.01, val_x, val_y);
 
     std::cout << std::setprecision(2);

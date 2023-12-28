@@ -28,7 +28,6 @@ void testFeedFwd(){
     Logistic<double> log;
     MSE<double> mse;
     Sequential<double> model(arch, log, mse, false);
-    size_t n_samples = 10;
     Eigen::MatrixXd x(2, 10);
     Eigen::VectorXd xi {{5, 3}};
     for(int i{0}; i < 10; i++){x.col(i) = xi;}
@@ -67,7 +66,7 @@ void testBackProp(){
     std::cout << "Prediction: \n" << model.activations.back() << "\n\n";
 
     model.backProp(x, y);
-    for(int i{0}; i < model.num_layers-1; i++){
+    for(size_t i{0}; i < model.num_layers-1; i++){
         model.weights[i] -= (0.9 / n_samples) * (model.nabla_w[i]);
         model.biases[i] -= (0.9 / n_samples) * (model.nabla_b[i]);
     }
