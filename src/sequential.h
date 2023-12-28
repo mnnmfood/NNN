@@ -54,15 +54,19 @@ public:
     std::vector<Matrix<Scalar, Dynamic, Dynamic>> nabla_w;
 
     std::vector<Matrix<Scalar, Dynamic, Dynamic>> delta;
+    // For momentum
+    Matrix<Scalar, Dynamic, Dynamic> cached_weights;
+    Vector<Scalar, Dynamic> cached_biases;
 
-    ActivationFun<Scalar>* activationFun;
+    std::vector<ActivationFun<Scalar>*> activationFun;
 
     CostFun<Scalar>* costFun;
 
 public:
     Sequential() = delete;
-    Sequential(std::vector<int>& arch_in, ActivationFun<Scalar>* a, CostFun<Scalar>* c)
-        :arch {arch_in}, activationFun {a}, costFun {c}
+    Sequential(std::vector<int>& arch_in, ActivationFun<Scalar>& a, CostFun<Scalar>& c, 
+                bool use_softmax=true)
+        :arch {arch_in}, costFun {&c}
     {
         num_layers = static_cast<int>(arch.size());
         int n_last{arch.front()};
@@ -86,7 +90,11 @@ public:
             nabla_b.push_back( Vector<Scalar, Dynamic>(*it));
             nabla_w.push_back( Matrix<Scalar, Dynamic, Dynamic>(*it, n_last));
 
+            activationFun.push_back(&a);
             n_last = *it;
+        }
+        if(use_softmax){
+            activationFun.back() = new SoftMax<Scalar>();
         }
     }
 
@@ -94,12 +102,12 @@ public:
         activations[0] = input;
 
         w_inputs[0] = (weights[0] * input).colwise() + biases[0];
-        activations[1] = activationFun->activation(w_inputs[0]);
+        activations[1] = activationFun[0]->activation(w_inputs[0]);
 
         for(size_t i{1}; i < num_layers-1; i++){
             w_inputs[i] = (weights[i] * activations[i]).
                             colwise() + biases[i];      
-            activations[i+1] = activationFun->activation(w_inputs[i]);
+            activations[i+1] = activationFun[i]->activation(w_inputs[i]);
         }
     }
 
@@ -108,17 +116,16 @@ public:
         feedFwd(x);
 
         //delta.back() = costFun->grad(activations.back(), y).cwiseProduct(
-        //        activationFun->activation_prime(w_inputs.back()));
+        //        activationFun[num_layers - i + 1]->activation_prime(w_inputs.back()));
         delta.back() = costFun->grad(activations.back(), y,
-                activationFun->activation_prime(w_inputs.back()));
-
+                activationFun.back()->activation_prime(w_inputs.back()));
         nabla_b.back() = (delta.back()).rowwise().sum();
         nabla_w.back() = delta.back() * (activations[num_layers-2]).transpose();
 
 
         for(int i{3}; i < num_layers+1; i++){
             delta[num_layers-i] = ((weights[num_layers -i + 1]).transpose() * 
-                delta[num_layers - i + 1]).cwiseProduct(activationFun->
+                delta[num_layers - i + 1]).cwiseProduct(activationFun[num_layers - i + 1]->
                 activation_prime(w_inputs[num_layers - i]));
 
             nabla_b[num_layers-i] = (delta[num_layers-i]).rowwise().sum();

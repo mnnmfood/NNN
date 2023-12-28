@@ -7,6 +7,7 @@
 #include <functional>
 
 using Eigen::Matrix;
+using Eigen::Vector;
 using Eigen::Dynamic;
 
 
@@ -71,6 +72,63 @@ public:
     Matrix<Scalar, Dynamic, Dynamic> activation_prime(const Matrix<Scalar, Dynamic, Dynamic>& z) override{
         return z.unaryExpr(std::ref(tanh_prime<Scalar>));
     }
+};
+
+template<typename Scalar>
+class usrExp
+{
+    Scalar m{};
+public:
+    usrExp(Scalar i) :m{i}{}
+    Scalar operator()(Scalar z) const{
+        return std::exp(z - m);
+    }
+};
+
+template<typename Scalar>
+Scalar usrLog(Scalar z){
+    return std::log(z);
+}
+
+template<typename Scalar>
+class SoftMax: public ActivationFun<Scalar>
+{
+    public:
+    SoftMax(){}
+
+    Matrix<Scalar, Dynamic, Dynamic> activation(const Matrix<Scalar, Dynamic, Dynamic>& z) override{
+        Matrix<Scalar, Dynamic, Dynamic> temp_max = z.colwise().maxCoeff();
+        Matrix<Scalar, Dynamic, Dynamic> temp_exp{z.rows(), z.cols()};
+
+        for(int i{0}; i < z.cols(); i++){
+            temp_exp.col(i) = z.col(i).unaryExpr(usrExp<Scalar>(temp_max(i)));
+        }
+
+        Vector<Scalar, Dynamic> temp_sum = temp_exp.colwise().sum().unaryExpr(std::ref(usrLog<Scalar>));
+        Matrix<Scalar, Dynamic, Dynamic> res(z.rows(), z.cols());
+        for(int i{0}; i < res.cols(); i++){
+            res.col(i) = z.col(i).unaryExpr(usrExp<Scalar>(temp_sum(i) + temp_max(i)));
+        }
+
+        return res;
+    }
+
+    Matrix<Scalar, Dynamic, Dynamic> activation_prime(const Matrix<Scalar, Dynamic, Dynamic>& z) override{
+        Matrix<Scalar, Dynamic, Dynamic> temp_max = z.colwise().maxCoeff();
+        Matrix<Scalar, Dynamic, Dynamic> temp_exp(z.rows(), z.cols());
+
+        for(int i{0}; i < z.cols(); i++){
+            temp_exp.col(i) = z.col(i).unaryExpr(usrExp<Scalar>(temp_max(i)));
+        }
+
+        Vector<Scalar, Dynamic> temp_sum = temp_exp.colwise().sum().unaryExpr(std::ref(usrLog<Scalar>));
+        Matrix<Scalar, Dynamic, Dynamic> res(z.rows(), z.cols());
+        for(int i{0}; i < res.cols(); i++){
+            res.col(i) = z.col(i).unaryExpr(usrExp<Scalar>(temp_sum(i) + temp_max(i)));
+        }
+        return  res - res.cwiseProduct(res); 
+    }
+
 };
 
 #endif

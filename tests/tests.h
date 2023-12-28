@@ -11,7 +11,9 @@ void printShape(Matrix<double, Dynamic, Dynamic>& a){
 
 void testSequentialInit(){
     std::vector<int> arch {1, 2, 3, 4};
-    Sequential<double> model(arch, new Logistic<double>(), new MSE<double>());
+    Logistic<double> log;
+    MSE<double> mse;
+    Sequential<double> model(arch, log, mse, false);
     size_t n_samples = 10;
     model.initGD(n_samples);
     std::cout << "Delta layer1, ";
@@ -23,7 +25,10 @@ void testSequentialInit(){
 
 void testFeedFwd(){
     std::vector<int> arch {2, 3, 3, 2};
-    Sequential<double> model(arch, new Logistic<double>(), new MSE<double>());
+    Logistic<double> log;
+    MSE<double> mse;
+    Sequential<double> model(arch, log, mse, false);
+    size_t n_samples = 10;
     Eigen::MatrixXd x(2, 10);
     Eigen::VectorXd xi {{5, 3}};
     for(int i{0}; i < 10; i++){x.col(i) = xi;}
@@ -42,7 +47,10 @@ void testFeedFwd(){
 
 void testBackProp(){
     std::vector<int> arch {6, 3, 3, 3};
-    Sequential<double> model(arch, new Logistic<double>(), new MSE<double>());
+
+    Logistic<double> log;
+    MSE<double> mse;
+    Sequential<double> model(arch, log, mse, false);
     int n_samples {2};
     Eigen::VectorXd xi {{2734, 342, 24, 23, 1, 90}};
     Eigen::MatrixXd x(6, n_samples);

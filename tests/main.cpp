@@ -37,8 +37,10 @@ int main(){
     std::cout << "Shape y: " << val_y.rows() << ", " << val_y.cols()<< '\n';
 
     // network architecture
-    std::vector<int> arch {784, 512, 30, 10};
-    Sequential<float> model(arch, new Logistic<float>(), new CrossEntropy<float>());
+    std::vector<int> arch {784, 30, 10};
+    Logistic<float> log;
+    CrossEntropy<float> cross;
+    Sequential<float> model(arch, log, cross, false);
     //Sequential<float> model(arch, new Tanh<float>(), new MSE<float>());
     std::cout << model << '\n';
 
