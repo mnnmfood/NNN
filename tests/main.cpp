@@ -14,9 +14,6 @@ using Eigen::Dynamic;
 using Eigen::Vector;
 
 int main(){
-#ifdef FLAGSET
-    std::cout << "Flags set\n\n";
-#endif
     std::cout << "--TESTING Mnist Data" << "\n";
     std::string dataDir {"../data/mnist/"};
     //#std::vector<Vector<float, Dynamic>*> x;
@@ -39,8 +36,8 @@ int main(){
     // network architecture
     std::vector<int> arch {784, 30, 30, 10};
     Logistic<float> activ;
-    MSE<float> cost;
-    Sequential<float> model(arch, activ, cost, true);
+    MSE cost;
+    Sequential model(arch, &activ, &cost, true);
     //Sequential<float> model(arch, new Tanh<float>(), new MSE<float>());
     std::cout << model << '\n';
 
