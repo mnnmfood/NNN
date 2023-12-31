@@ -5,6 +5,7 @@
 #include <costs.h>
 
 using Eigen::Dynamic;
+using Eigen::Matrix;
 
 float MSE::cost(const Matrix<float, Dynamic, Dynamic>& a, 
                 const Matrix<float, Dynamic, Dynamic>& y){
@@ -13,9 +14,8 @@ float MSE::cost(const Matrix<float, Dynamic, Dynamic>& a,
 
 Matrix<float, Dynamic, Dynamic> MSE::grad(
         const Matrix<float, Dynamic, Dynamic>& a,
-        const Matrix<float, Dynamic, Dynamic>& y,
-        const Matrix<float, Dynamic, Dynamic>& a_p){
-    return (a - y).cwiseProduct(a_p);
+        const Matrix<float, Dynamic, Dynamic>& y){
+    return (a - y);
 }
 
 float cross_entropy(float a, float y){
@@ -30,7 +30,6 @@ float CrossEntropy::cost(const Matrix<float, Dynamic, Dynamic>& a,
 
 Matrix<float, Dynamic, Dynamic> CrossEntropy::grad(
     const Matrix<float, Dynamic, Dynamic>& a,
-    const Matrix<float, Dynamic, Dynamic>& y, 
-    const Matrix<float, Dynamic, Dynamic>& a_p){
+    const Matrix<float, Dynamic, Dynamic>& y){ 
     return a - y;
 }

@@ -7,6 +7,7 @@
 #include "costs.h"
 #include "utils.h"
 #include "sequential.h"
+#include "layers.h"
 #include "tests.h"
 
 using Eigen::Matrix;
@@ -14,6 +15,7 @@ using Eigen::Dynamic;
 using Eigen::Vector;
 
 int main(){
+
     std::cout << "--TESTING Mnist Data" << "\n";
     std::string dataDir {"../data/mnist/"};
     //#std::vector<Vector<float, Dynamic>*> x;
@@ -34,12 +36,12 @@ int main(){
     std::cout << "Shape y: " << val_y.rows() << ", " << val_y.cols()<< '\n';
 
     // network architecture
-    std::vector<int> arch {784, 30, 30, 10};
-    Logistic<float> activ;
-    MSE cost;
-    Sequential model(arch, &activ, &cost, true);
-    //Sequential<float> model(arch, new Tanh<float>(), new MSE<float>());
-    std::cout << model << '\n';
+    Sequential2 model({
+        new InputLayer(784),
+        new SigmoidLayer(30), 
+        new SigmoidLayer(10)
+        }
+        , new MSE());
 
     model.SGD(x, y, 10, 10, 0.5, 0.00, val_x, val_y);
     //model.GD(x, y, 10, 0.5, 0.01, val_x, val_y);

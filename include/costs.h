@@ -17,8 +17,7 @@ public:
                         const Matrix<float, Dynamic, Dynamic>& y) = 0;
     virtual Matrix<float, Dynamic, Dynamic> grad(
         const Matrix<float, Dynamic, Dynamic>& a,
-        const Matrix<float, Dynamic, Dynamic>& y,
-        const Matrix<float, Dynamic, Dynamic>& a_p) = 0;
+        const Matrix<float, Dynamic, Dynamic>& y) = 0;
     virtual ~CostFun() = default;
 };
 
@@ -30,8 +29,7 @@ public:
 
     Matrix<float, Dynamic, Dynamic> grad(
         const Matrix<float, Dynamic, Dynamic>& a,
-        const Matrix<float, Dynamic, Dynamic>& y,
-        const Matrix<float, Dynamic, Dynamic>& a_p) override;
+        const Matrix<float, Dynamic, Dynamic>& y) override;
 };
 
 float cross_entropy(float a, float y);
@@ -44,8 +42,7 @@ public:
 
     Matrix<float, Dynamic, Dynamic> grad(
         const Matrix<float, Dynamic, Dynamic>& a,
-        const Matrix<float, Dynamic, Dynamic>& y, 
-        const Matrix<float, Dynamic, Dynamic>& a_p) override;
+        const Matrix<float, Dynamic, Dynamic>& y) override; 
 };
 
 #endif
