@@ -3,7 +3,6 @@
 #include <iomanip>
 #include <vector>
 #include <Eigen/Dense>
-#include "activations.h"
 #include "costs.h"
 #include "utils.h"
 #include "sequential.h"

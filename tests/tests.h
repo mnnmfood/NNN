@@ -2,7 +2,6 @@
 #define TEST_H
 
 #include "sequential.h"
-#include "activations.h"
 #include "costs.h"
 
 void printShape(const Matrix<float, Dynamic, Dynamic>& a){ 
