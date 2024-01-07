@@ -188,3 +188,5 @@ MatrixXf SoftMaxLayer::grad_act(const MatrixXf& z){
     }
     return  res - res.cwiseProduct(res); 
 }
+
+
