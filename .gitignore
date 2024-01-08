@@ -2,7 +2,8 @@ python/
 .vscode/
 build/*
 !build/.gitignore 
+data/mnist_png
+tests/*.png
 
 *.exe
 *.zip
-*.gz

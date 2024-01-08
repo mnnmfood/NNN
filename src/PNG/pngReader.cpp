@@ -1,6 +1,5 @@
 #include <iostream>
 #include "pngWrapper.h"
-#include "eigenFunctors.h"
 
 namespace png
 {
@@ -67,13 +66,15 @@ void PNGReader::setTransforms(int dst_color)
     }
     // If dst is gray-scale
     else if((m_info.color_type == PNG_COLOR_TYPE_RGB ||
-        m_info.color_type == PNG_COLOR_TYPE_RGB_ALPHA) 
+        m_info.color_type == PNG_COLOR_TYPE_RGB_ALPHA ||
+        m_info.color_type == PNG_COLOR_TYPE_PALETTE) 
         && (dst_color == PNG_COLOR_TYPE_GRAY)){
         png_set_rgb_to_gray(m_png, 1, -1, -1);
     }
     // If dst is rgb
     else if((m_info.color_type == PNG_COLOR_TYPE_GRAY ||
-        m_info.color_type == PNG_COLOR_TYPE_GRAY_ALPHA) 
+        m_info.color_type == PNG_COLOR_TYPE_GRAY_ALPHA ||
+        m_info.color_type == PNG_COLOR_TYPE_PALETTE) 
         && (dst_color == PNG_COLOR_TYPE_RGB)){
         png_set_gray_to_rgb(m_png);
     }

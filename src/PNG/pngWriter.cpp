@@ -1,6 +1,5 @@
 #include <iostream>
 #include "pngWrapper.h"
-#include "eigenFunctors.h"
 
 namespace png
 {

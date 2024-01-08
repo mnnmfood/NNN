@@ -9,7 +9,6 @@ void printShape(const Matrix<float, Dynamic, Dynamic>& a){
 }
 
 void testSequentialInit(){
-    MSE mse;
     Sequential2 model({
         new InputLayer(784),
         new SigmoidLayer(30), 
@@ -43,7 +42,7 @@ void testBackProp(){
     Sequential2 model({
         new InputLayer(6),
         new SigmoidLayer(30), 
-        new SigmoidLayer(10)
+        new SigmoidLayer(3)
         }
         , new MSE());
 

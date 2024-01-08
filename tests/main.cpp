@@ -2,21 +2,25 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+
 #include <Eigen/Dense>
+
+#include "typedefs.h"
 #include "costs.h"
 #include "utils.h"
 #include "sequential.h"
 #include "layers.h"
-#include "tests.h"
 
-using Eigen::Matrix;
-using Eigen::Dynamic;
-using Eigen::Vector;
+#include "tests.h"
+#include "pngTests.h"
 
 int main(){
 
+    std::cout << "--TESTING PNG" << "\n";
+    testPNG();
+
     std::cout << "--TESTING Mnist Data" << "\n";
-    std::string dataDir {"../data/mnist/"};
+    std::string dataDir {"../data/mnist_csv/"};
     //#std::vector<Vector<float, Dynamic>*> x;
     Matrix<float, Dynamic, Dynamic> x;
     load_csv(dataDir + "train_x.csv", x);
