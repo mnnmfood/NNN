@@ -15,7 +15,6 @@
 #include "pngTests.h"
 
 int main(){
-
     std::cout << "--TESTING PNG" << "\n";
     testPNG();
 

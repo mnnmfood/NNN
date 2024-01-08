@@ -14,34 +14,32 @@ PNGReader::PNGReader(std::istream& stream)
 
 void PNGReader::read(int dst_type, std::vector<byte>& data)
 {
-    data = read_vec(dst_type);
+    setTransforms(dst_type);
+    size_t nbytes = png_get_rowbytes(m_png, m_info.m_info_ptr);
+    total_size = nbytes * m_info.height;
+    data.resize(total_size);
+    read_arr(data.data(), nbytes, dst_type);
 }
 
 void PNGReader::read(int dst_type, Tensor<byte, 2>& data)
 {
+
+    setTransforms(dst_type);
+    size_t nbytes = png_get_rowbytes(m_png, m_info.m_info_ptr);
+    total_size = nbytes * m_info.height;
     // there is porbably a better way to do it, for now
     // return tranpsosed tensor
-    Tensor<byte, 2> temp = TensorMap<Tensor<byte, 2>>(
-        read_vec(dst_type).data(),
-        m_info.width,
-        m_info.height
-    );
-    data = transposed(temp);
+    data = Tensor<byte, 2>(nbytes, m_info.height);
+    read_arr(data.data(), nbytes, dst_type);
+    data = transposed(data);
 }
 
-std::vector<byte> PNGReader::read_vec(int dst_type)
+void PNGReader::read_arr(byte* buffer, int nbytes, int dst_type)
 {
-    setTransforms(dst_type);
-    int nbytes = png_get_rowbytes(m_png, m_info.m_info_ptr);
-
-    total_size = nbytes * m_info.height;
-    std::vector<byte> data;
-    data.reserve(total_size);
-    data.resize(total_size);
+    // at this point buffer memory should be allocated
     for(png_size_t i{0}; i < m_info.height; i++){
-        readRow(&data[nbytes*i]);
+        readRow(buffer + nbytes*i);
     }
-    return data;
 }
 
 void PNGReader::setTransforms(int dst_color)

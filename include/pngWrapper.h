@@ -123,7 +123,7 @@ public:
     friend std::ostream& operator<<(std::ostream&, PNGReader&);
 
 protected:
-    std::vector<byte> read_vec(int);
+    void read_arr(byte*, int, int);
     void setTransforms(int);
     static void read_callback(png_structp, byte*, png_size_t);
     static void raise_error(png_structp, char const*);

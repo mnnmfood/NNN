@@ -31,7 +31,8 @@ void testGray()
     std::string dataDir {"../data/png/"};
     std::ifstream fpi{dataDir + "cs-black-000.png", std::ios::binary};
     png::PNGReader reader(fpi);
-    Tensor<byte, 2> data;
+    //Tensor<byte, 2> data;
+    std::vector<byte> data;
     reader.read(PNG_COLOR_TYPE_GRAY, data);
     std::cout << reader;
 
