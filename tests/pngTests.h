@@ -31,7 +31,6 @@ void testGray()
     std::string dataDir {"../data/png/"};
     std::ifstream fpi{dataDir + "cs-black-000.png", std::ios::binary};
     png::PNGReader reader(fpi);
-    //Tensor<byte, 2> data;
     std::vector<byte> data;
     reader.read(PNG_COLOR_TYPE_GRAY, data);
     std::cout << reader;
@@ -56,7 +55,7 @@ void testReset()
     reader.read(PNG_COLOR_TYPE_GRAY, data);
 
     std::string outDir {"./"};
-    std::ofstream fpo1(outDir + "out1.png", std::ios::binary);
+    std::ofstream fpo1(outDir + "basn0g01.png", std::ios::binary);
     png::PNGWriter writer(fpo1, png::pngInfo(reader.m_info.height, 
                     reader.m_info.width));
     writer.write(PNG_COLOR_TYPE_GRAY, data);
@@ -66,8 +65,8 @@ void testReset()
     reader.reset(fpi2);
     reader.read(PNG_COLOR_TYPE_GRAY, data);
 
-    std::ofstream fpo2(outDir + "out2.png", std::ios::binary);
-    writer.reset(fpo2);
+    std::ofstream fpo2(outDir + "basn0g02.png", std::ios::binary);
+    writer.reset(fpo2, png::pngInfo(reader.m_info.height, reader.m_info.width));
     writer.write(PNG_COLOR_TYPE_GRAY, data);
 }
 
@@ -75,5 +74,6 @@ void testPNG()
 {
     testColor();
     testGray();
+    testReset();
     std::cout << "Success" << "\n\n";
 }
