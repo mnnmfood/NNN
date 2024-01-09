@@ -3,12 +3,12 @@
 
 namespace png
 {
-PNGReader::PNGReader(std::istream& stream)
+PNGReader::PNGReader(std::ifstream& stream)
     :m_png{png_create_read_struct(PNG_LIBPNG_VER_STRING, 
         this, raise_error, 0)},
-    m_info {m_png}
+    m_info {m_png}, m_stream {&stream}
 {
-    png_set_read_fn(m_png, &stream, read_callback);
+    png_set_read_fn(m_png, m_stream, read_callback);
     m_info.read();
 }
 
@@ -22,8 +22,9 @@ void PNGReader::read(int dst_type, std::vector<byte>& data)
 
 void PNGReader::read(int dst_type, Tensor<byte, 2>& data)
 {
+    if(dst_type != m_info.color_type)
+        setTransforms(dst_type);
 
-    setTransforms(dst_type);
     nbytes = png_get_rowbytes(m_png, m_info.m_info_ptr);
     // there is porbably a better way to do it, for now
     // return tranpsosed tensor
@@ -132,6 +133,14 @@ std::ostream& operator<<(std::ostream& stream, PNGReader& reader){
     stream << static_cast<int>(reader.m_info.width) << "\n\n";
     return stream;
 
+}
+
+void PNGReader::reset(std::ifstream& stream)
+{
+    m_stream->close();
+    m_stream = &stream;
+    png_set_read_fn(m_png, m_stream, read_callback);
+    m_info.read();
 }
 
 PNGReader::~PNGReader()

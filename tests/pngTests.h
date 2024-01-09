@@ -46,6 +46,31 @@ void testGray()
     std::cout << writer;
 }
 
+void testReset()
+{
+    // First read-write
+    std::string dataDir {"../data/png/"};
+    std::ifstream fpi1{dataDir + "cs-black-000.png", std::ios::binary};
+    png::PNGReader reader(fpi1);
+    std::vector<byte> data;
+    reader.read(PNG_COLOR_TYPE_GRAY, data);
+
+    std::string outDir {"./"};
+    std::ofstream fpo1(outDir + "out1.png", std::ios::binary);
+    png::PNGWriter writer(fpo1, png::pngInfo(reader.m_info.height, 
+                    reader.m_info.width));
+    writer.write(PNG_COLOR_TYPE_GRAY, data);
+
+    // Second read-write
+    std::ifstream fpi2{dataDir + "cs-black-000.png", std::ios::binary};
+    reader.reset(fpi2);
+    reader.read(PNG_COLOR_TYPE_GRAY, data);
+
+    std::ofstream fpo2(outDir + "out2.png", std::ios::binary);
+    writer.reset(fpo2);
+    writer.write(PNG_COLOR_TYPE_GRAY, data);
+}
+
 void testPNG()
 {
     testColor();

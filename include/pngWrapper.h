@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <fstream>
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include "typedefs.h"
@@ -108,13 +109,15 @@ class PNGReader
 public:
     png_structp m_png;
     pngInfo m_info;
+    std::ifstream* m_stream;
 
     std::string error_msg;
     size_t nbytes;
 
     PNGReader() = delete;
-    PNGReader(std::istream&);
+    PNGReader(std::ifstream&);
     ~PNGReader();
+    void reset(std::ifstream&);
 
     void read(int, std::vector<byte>&);
     void read(int, Tensor<byte, 2>&);
@@ -135,14 +138,16 @@ class PNGWriter
 public:
     std::vector<byte> m_data;
     png_structp m_png;
+    std::ofstream* m_stream;
     pngInfo m_info;
     size_t nbytes;
 
     std::string error_msg;
 
     PNGWriter() = delete;
-    PNGWriter(std::ostream&, pngInfo);
+    PNGWriter(std::ofstream&, pngInfo);
     ~PNGWriter();
+    void reset(std::ofstream&);
 
     void write(int, std::vector<byte>&);
     void write(int, Tensor<byte, 2>);

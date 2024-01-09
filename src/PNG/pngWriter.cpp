@@ -3,9 +3,9 @@
 
 namespace png
 {
-PNGWriter::PNGWriter(std::ostream& stream, 
+PNGWriter::PNGWriter(std::ofstream& stream, 
                     pngInfo info)
-    :m_info{info}
+    :m_info {m_info}, m_stream {&stream}
 {
     m_png  = png_create_write_struct(
         PNG_LIBPNG_VER_STRING, 
@@ -13,7 +13,7 @@ PNGWriter::PNGWriter(std::ostream& stream,
         raise_error, 
         0);
     m_info.set_info_ptr(m_png, png_create_info_struct(m_png));
-    png_set_write_fn(m_png, &stream, write_data, flush_data);
+    png_set_write_fn(m_png, &m_stream, write_data, flush_data);
 }
 
 void PNGWriter::write(int dst_type, std::vector<byte>& data)
@@ -154,6 +154,13 @@ std::ostream& operator<<(std::ostream& stream, PNGWriter& reader){
     stream << "Shape: " << static_cast<int>(reader.m_info.height) << ", ";
     stream << static_cast<int>(reader.m_info.width) << "\n\n";
     return stream;
+}
+
+void PNGWriter::reset(std::ofstream& stream)
+{
+    m_stream->close();
+    m_stream = &stream;
+    png_set_write_fn(m_png, m_stream, write_data, flush_data);
 }
 
 PNGWriter::~PNGWriter()
