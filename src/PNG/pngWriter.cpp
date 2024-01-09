@@ -4,30 +4,9 @@
 namespace png
 {
 PNGWriter::PNGWriter(std::ostream& stream, 
-                    std::vector<byte> bytes, 
-                    pngInfo info)
-    :m_data(bytes), m_info{info}
-{
-    m_png  = png_create_write_struct(
-        PNG_LIBPNG_VER_STRING, 
-        this, 
-        raise_error, 
-        0);
-    m_info.set_info_ptr(m_png, png_create_info_struct(m_png));
-    png_set_write_fn(m_png, &stream, write_data, flush_data);
-}
-
-PNGWriter::PNGWriter(std::ostream& stream, 
-                    Tensor<byte, 2> bytes, 
                     pngInfo info)
     :m_info{info}
 {
-
-    // Porbably there is a better way to do it, for now
-    // tranpsose tensor
-    Tensor<byte, 2> temp = transposed(bytes);
-
-    m_data.assign(temp.data(), temp.data() + temp.size());
     m_png  = png_create_write_struct(
         PNG_LIBPNG_VER_STRING, 
         this, 
@@ -37,15 +16,29 @@ PNGWriter::PNGWriter(std::ostream& stream,
     png_set_write_fn(m_png, &stream, write_data, flush_data);
 }
 
-void PNGWriter::write(int dst_type)
+void PNGWriter::write(int dst_type, std::vector<byte>& data)
+{
+    nbytes = data.size() / m_info.height;
+    write_arr(data.data(), m_info.height, nbytes, dst_type);
+}
+
+void PNGWriter::write(int dst_type, Tensor<byte, 2> data)
+{
+    // In eigen tensor data is ordered column-wise so we
+    // need to transpose
+    data = transposed(data);
+
+    nbytes = data.size() / m_info.height;
+    write_arr(data.data(), m_info.height, nbytes, dst_type);
+}
+
+void PNGWriter::write_arr(byte* buffer, size_t rows, size_t cols, int dst_type)
 {
     setTransforms(dst_type);
-    size_t nbytes = m_data.size() / m_info.height;
-
     m_info.write();
 
-    for(png_size_t i{0}; i < m_info.height; i++){
-        writeRow(&m_data[nbytes * i]);
+    for(size_t i{0}; i < rows; i++){
+        writeRow(buffer + cols*i);
     }
 }
 

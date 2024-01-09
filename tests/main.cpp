@@ -15,6 +15,7 @@
 #include "pngTests.h"
 
 int main(){
+    
     std::cout << "--TESTING PNG" << "\n";
     testPNG();
 
@@ -58,4 +59,5 @@ int main(){
     testFeedFwd();
     std::cout << "--TESTING Backwards-propagation" << "\n";
     testBackProp();
+
 }

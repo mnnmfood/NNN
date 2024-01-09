@@ -110,7 +110,7 @@ public:
     pngInfo m_info;
 
     std::string error_msg;
-    size_t total_size;
+    size_t nbytes;
 
     PNGReader() = delete;
     PNGReader(std::istream&);
@@ -118,12 +118,12 @@ public:
 
     void read(int, std::vector<byte>&);
     void read(int, Tensor<byte, 2>&);
+    void read_arr(byte*, size_t, size_t, int);
     void readRow(byte*);
 
     friend std::ostream& operator<<(std::ostream&, PNGReader&);
 
 protected:
-    void read_arr(byte*, int, int);
     void setTransforms(int);
     static void read_callback(png_structp, byte*, png_size_t);
     static void raise_error(png_structp, char const*);
@@ -136,15 +136,17 @@ public:
     std::vector<byte> m_data;
     png_structp m_png;
     pngInfo m_info;
+    size_t nbytes;
 
     std::string error_msg;
 
     PNGWriter() = delete;
-    PNGWriter(std::ostream&, std::vector<byte>, pngInfo);
-    PNGWriter(std::ostream&, Tensor<byte, 2>, pngInfo);
+    PNGWriter(std::ostream&, pngInfo);
     ~PNGWriter();
 
-    void write(int);
+    void write(int, std::vector<byte>&);
+    void write(int, Tensor<byte, 2>);
+    void write_arr(byte*, size_t, size_t, int);
     void writeRow(byte*);
 
     friend std::ostream& operator<<(std::ostream&, PNGWriter&);

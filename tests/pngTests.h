@@ -17,9 +17,9 @@ void testColor()
     // Write Image
     std::string outDir {"./"};
     std::ofstream fpo(outDir + "cs-black-000_rgb.png", std::ios::binary);
-    png::PNGWriter writer(fpo, data, png::pngInfo(reader.m_info.height, 
+    png::PNGWriter writer(fpo, png::pngInfo(reader.m_info.height, 
                     reader.m_info.width));
-    writer.write(PNG_COLOR_TYPE_RGB);
+    writer.write(PNG_COLOR_TYPE_RGB, data);
     std::cout << writer;
 }
 
@@ -40,9 +40,9 @@ void testGray()
     // Write Image
     std::string outDir {"./"};
     std::ofstream fpo(outDir + "cs-black-000_gray.png", std::ios::binary);
-    png::PNGWriter writer(fpo, data, png::pngInfo(reader.m_info.height, 
+    png::PNGWriter writer(fpo, png::pngInfo(reader.m_info.height, 
                     reader.m_info.width));
-    writer.write(PNG_COLOR_TYPE_GRAY);
+    writer.write(PNG_COLOR_TYPE_GRAY, data);
     std::cout << writer;
 }
 

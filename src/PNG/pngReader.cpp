@@ -15,30 +15,28 @@ PNGReader::PNGReader(std::istream& stream)
 void PNGReader::read(int dst_type, std::vector<byte>& data)
 {
     setTransforms(dst_type);
-    size_t nbytes = png_get_rowbytes(m_png, m_info.m_info_ptr);
-    total_size = nbytes * m_info.height;
-    data.resize(total_size);
-    read_arr(data.data(), nbytes, dst_type);
+    nbytes = png_get_rowbytes(m_png, m_info.m_info_ptr);
+    data.resize(nbytes * m_info.height);
+    read_arr(data.data(), m_info.height, nbytes, dst_type);
 }
 
 void PNGReader::read(int dst_type, Tensor<byte, 2>& data)
 {
 
     setTransforms(dst_type);
-    size_t nbytes = png_get_rowbytes(m_png, m_info.m_info_ptr);
-    total_size = nbytes * m_info.height;
+    nbytes = png_get_rowbytes(m_png, m_info.m_info_ptr);
     // there is porbably a better way to do it, for now
     // return tranpsosed tensor
     data = Tensor<byte, 2>(nbytes, m_info.height);
-    read_arr(data.data(), nbytes, dst_type);
+    read_arr(data.data(), m_info.height, nbytes, dst_type);
     data = transposed(data);
 }
 
-void PNGReader::read_arr(byte* buffer, int nbytes, int dst_type)
+void PNGReader::read_arr(byte* buffer, size_t rows, size_t cols, int dst_type)
 {
     // at this point buffer memory should be allocated
-    for(png_size_t i{0}; i < m_info.height; i++){
-        readRow(buffer + nbytes*i);
+    for(size_t i{0}; i < rows; i++){
+        readRow(buffer + cols*i);
     }
 }
 
