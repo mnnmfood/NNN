@@ -139,6 +139,12 @@ void PNGReader::reset(std::ifstream& stream)
 {
     m_stream->close();
     m_stream = &stream;
+    // There is no way around it, png structs cannot be reused
+    png_destroy_read_struct(&m_png, &m_info.m_info_ptr, NULL);
+    m_png = png_create_read_struct(PNG_LIBPNG_VER_STRING, 
+        this, raise_error, 0);
+    m_info = pngInfo(m_png);
+    
     png_set_read_fn(m_png, m_stream, read_callback);
     m_info.read();
 }

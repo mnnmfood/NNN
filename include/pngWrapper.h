@@ -92,6 +92,7 @@ struct pngInfo: public png_info
 
 protected:
     void sync(){
+        std::cout << "width: " << width << "\n";
         png_set_IHDR(m_png,
                     m_info_ptr,
                     width,
@@ -147,7 +148,7 @@ public:
     PNGWriter() = delete;
     PNGWriter(std::ofstream&, pngInfo);
     ~PNGWriter();
-    void reset(std::ofstream&);
+    void reset(std::ofstream&, pngInfo);
 
     void write(int, std::vector<byte>&);
     void write(int, Tensor<byte, 2>);

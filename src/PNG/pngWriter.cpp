@@ -5,15 +5,15 @@ namespace png
 {
 PNGWriter::PNGWriter(std::ofstream& stream, 
                     pngInfo info)
-    :m_info {m_info}, m_stream {&stream}
+    :m_info {info}, m_stream {&stream}
 {
     m_png  = png_create_write_struct(
         PNG_LIBPNG_VER_STRING, 
         this, 
         raise_error, 
         0);
+    png_set_write_fn(m_png, m_stream, write_data, flush_data);
     m_info.set_info_ptr(m_png, png_create_info_struct(m_png));
-    png_set_write_fn(m_png, &m_stream, write_data, flush_data);
 }
 
 void PNGWriter::write(int dst_type, std::vector<byte>& data)
@@ -156,16 +156,22 @@ std::ostream& operator<<(std::ostream& stream, PNGWriter& reader){
     return stream;
 }
 
-void PNGWriter::reset(std::ofstream& stream)
+void PNGWriter::reset(std::ofstream& stream, pngInfo info)
 {
     m_stream->close();
     m_stream = &stream;
+    // There is no way around it, png structs cannot be reused
+    png_destroy_write_struct(&m_png, &m_info.m_info_ptr);
+    m_info = info;
+    m_png = png_create_write_struct(PNG_LIBPNG_VER_STRING, 
+        this, raise_error, 0);
+    m_info.set_info_ptr(m_png, png_create_info_struct(m_png));
     png_set_write_fn(m_png, m_stream, write_data, flush_data);
 }
 
 PNGWriter::~PNGWriter()
 {
-    png_destroy_write_struct(&m_png, NULL);
+    png_destroy_write_struct(&m_png, &m_info.m_info_ptr);
 }
 
 } //end png

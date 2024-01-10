@@ -17,6 +17,7 @@ void testColor()
     // Write Image
     std::string outDir {"./"};
     std::ofstream fpo(outDir + "cs-black-000_rgb.png", std::ios::binary);
+    std::cout << reader.m_info.width << "\n";
     png::PNGWriter writer(fpo, png::pngInfo(reader.m_info.height, 
                     reader.m_info.width));
     writer.write(PNG_COLOR_TYPE_RGB, data);
