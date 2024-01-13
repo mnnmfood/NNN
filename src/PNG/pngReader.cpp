@@ -137,7 +137,6 @@ std::ostream& operator<<(std::ostream& stream, PNGReader& reader){
 
 void PNGReader::reset(std::ifstream& stream)
 {
-    m_stream->close();
     m_stream = &stream;
     // There is no way around it, png structs cannot be reused
     png_destroy_read_struct(&m_png, &m_info.m_info_ptr, NULL);

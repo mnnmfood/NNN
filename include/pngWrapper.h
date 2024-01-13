@@ -92,7 +92,6 @@ struct pngInfo: public png_info
 
 protected:
     void sync(){
-        std::cout << "width: " << width << "\n";
         png_set_IHDR(m_png,
                     m_info_ptr,
                     width,
@@ -139,8 +138,8 @@ class PNGWriter
 public:
     std::vector<byte> m_data;
     png_structp m_png;
-    std::ofstream* m_stream;
     pngInfo m_info;
+    std::ofstream* m_stream;
     size_t nbytes;
 
     std::string error_msg;

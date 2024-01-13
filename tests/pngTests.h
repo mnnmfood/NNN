@@ -1,12 +1,15 @@
-
+#include <sys/stat.h>
 #include "pngWrapper.h"
+
+inline const std::string data_dir {"../data/"};
+inline const std::string out_dir {"./"};
 
 void testColor()
 {
 
     std::cout << "-Read Color" << "\n";
     // Read Image
-    std::string dataDir {"../data/png/"};
+    std::string dataDir {data_dir + "png/"};
     std::ifstream fpi{dataDir + "cs-black-000.png", std::ios::binary};
     png::PNGReader reader(fpi);
     Tensor<byte, 2> data;
@@ -15,8 +18,7 @@ void testColor()
 
     std::cout << "-Write Color" << "\n";
     // Write Image
-    std::string outDir {"./"};
-    std::ofstream fpo(outDir + "cs-black-000_rgb.png", std::ios::binary);
+    std::ofstream fpo(out_dir + "cs-black-000_rgb.png", std::ios::binary);
     std::cout << reader.m_info.width << "\n";
     png::PNGWriter writer(fpo, png::pngInfo(reader.m_info.height, 
                     reader.m_info.width));
@@ -29,7 +31,7 @@ void testGray()
 
     std::cout << "-Read Grayscale" << "\n";
     // Read Image
-    std::string dataDir {"../data/png/"};
+    std::string dataDir {data_dir + "png/"};
     std::ifstream fpi{dataDir + "cs-black-000.png", std::ios::binary};
     png::PNGReader reader(fpi);
     std::vector<byte> data;
@@ -38,8 +40,7 @@ void testGray()
 
     std::cout << "-Write Grayscale" << "\n";
     // Write Image
-    std::string outDir {"./"};
-    std::ofstream fpo(outDir + "cs-black-000_gray.png", std::ios::binary);
+    std::ofstream fpo(out_dir + "cs-black-000_gray.png", std::ios::binary);
     png::PNGWriter writer(fpo, png::pngInfo(reader.m_info.height, 
                     reader.m_info.width));
     writer.write(PNG_COLOR_TYPE_GRAY, data);
@@ -49,14 +50,13 @@ void testGray()
 void testReset()
 {
     // First read-write
-    std::string dataDir {"../data/png/"};
+    std::string dataDir {data_dir + "png/"};
     std::ifstream fpi1{dataDir + "cs-black-000.png", std::ios::binary};
     png::PNGReader reader(fpi1);
     std::vector<byte> data;
     reader.read(PNG_COLOR_TYPE_GRAY, data);
 
-    std::string outDir {"./"};
-    std::ofstream fpo1(outDir + "basn0g01.png", std::ios::binary);
+    std::ofstream fpo1(out_dir + "basn0g01.png", std::ios::binary);
     png::PNGWriter writer(fpo1, png::pngInfo(reader.m_info.height, 
                     reader.m_info.width));
     writer.write(PNG_COLOR_TYPE_GRAY, data);
@@ -66,9 +66,40 @@ void testReset()
     reader.reset(fpi2);
     reader.read(PNG_COLOR_TYPE_GRAY, data);
 
-    std::ofstream fpo2(outDir + "basn0g02.png", std::ios::binary);
+    std::ofstream fpo2(out_dir + "basn0g02.png", std::ios::binary);
     writer.reset(fpo2, png::pngInfo(reader.m_info.height, reader.m_info.width));
     writer.write(PNG_COLOR_TYPE_GRAY, data);
+}
+
+void testBulk()
+{
+    std::cout << "-- Test Bulk" << "\n";
+    size_t batch_size = 32;
+    std::string fullpath {data_dir + "mnist_png/testing/0/"};
+    Matrix<std::string, Dynamic, Dynamic> index;
+    load_csv(fullpath + "index.csv", index);
+
+    std::ifstream fp{fullpath + index(0, 0), std::ios::binary};
+    png::PNGReader reader{fp};
+    size_t width = reader.m_info.width;
+    size_t height = reader.m_info.height;
+    size_t total = width * height;
+    std::cout << width << ", " << height << "\n";
+
+    Tensor<byte, 3> images(height, width, batch_size);
+    for(size_t i{0}; i < batch_size; i++){
+        std::ifstream fpi(fullpath + index(0, i), std::ios::binary);
+        reader.reset(fpi);
+        reader.read_arr(images.data() + total * i, width, height, PNG_COLOR_TYPE_GRAY);
+    }
+    images = transposed(images);
+    for(size_t i{0}; i < batch_size; i++){
+        Tensor<byte, 2> image0 = images.chip(i, 2);
+        std::ofstream fpo(out_dir + "bulk_" + std::to_string(i) + ".png", std::ios::binary);
+        png::PNGWriter writer(fpo, png::pngInfo(width, height));
+        //writer.write_arr(image0.data(), width, height, PNG_COLOR_TYPE_GRAY);
+        writer.write(PNG_COLOR_TYPE_GRAY, image0);
+    }
 }
 
 void testPNG()
@@ -76,5 +107,10 @@ void testPNG()
     testColor();
     testGray();
     testReset();
+
+    struct stat info;
+    std::string pathname {data_dir + "mnist_png"};
+    if(stat(pathname.data(), &info)==0)
+        testBulk();
     std::cout << "Success" << "\n\n";
 }

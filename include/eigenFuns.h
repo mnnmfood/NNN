@@ -66,10 +66,14 @@ T max(const Tensor<T, 2>& t)
     return temp(0);
 }
 
-inline const Eigen::array<int, 2> shuffle_transpose({1, 0});
 template<typename ArgType>
 ArgType
 transposed(const ArgType& t){
+    Eigen::array<int, t.NumDimensions> shuffle_transpose;
+    shuffle_transpose[0] = 1;
+    shuffle_transpose[1] = 0;
+    for(int i{2}; i < t.NumDimensions; i++)
+        shuffle_transpose[i] = i;
     return t.shuffle(shuffle_transpose);
 }
 
