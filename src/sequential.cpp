@@ -41,7 +41,7 @@ void Sequential2::init(size_t num_samples){
     }
 }
 
-void Sequential2::fwdProp(const MatrixXf& input){
+void Sequential2::fwdProp(const Tensor<float, 2>& input){
     Layer* layer = _layers.front();
     layer->fwd(input);
     layer = layer->next();
@@ -51,7 +51,7 @@ void Sequential2::fwdProp(const MatrixXf& input){
     }
 }
 
-void Sequential2::bkwProp(const MatrixXf& output){
+void Sequential2::bkwProp(const Tensor<float, 2>& output){
     Layer* layer = _layers.back();
     layer->bwd(
         _cost->grad(layer->get_act(), output)
@@ -63,12 +63,12 @@ void Sequential2::bkwProp(const MatrixXf& output){
     }
 }
 
-void Sequential2::SGD(Matrix<float, Dynamic, Dynamic>& x,
-                    Matrix<float, Dynamic, Dynamic>& y, 
+void Sequential2::SGD(Tensor<float, 2>& x,
+                    Tensor<float, 2>& y, 
                     int epochs, int batch_size, float lr, float mu,
-                    Matrix<float, Dynamic, Dynamic>& val_x,
-                    Matrix<float, Dynamic, Dynamic>&val_y){
-    size_t train_size = x.cols();
+                    Tensor<float, 2>& val_x,
+                    Tensor<float, 2>&val_y){
+    size_t train_size = x.dimension(1);
     init(batch_size);
 
     // Prepare random indices 
@@ -103,12 +103,12 @@ void Sequential2::SGD(Matrix<float, Dynamic, Dynamic>& x,
     }
 }
 
-float Sequential2::accuracy(const MatrixXf& x, const MatrixXf& y)
+float Sequential2::accuracy(const Tensor<float, 2>& x, const Tensor<float, 2>& y)
 {
-    Eigen::Index test_size{x.cols()};
+    Eigen::Index test_size{x.dimension(1)};
 
     fwdProp(x);
-    MatrixXf pred = _layers.back()->get_act();
+    Tensor<float, 2> pred = _layers.back()->get_act();
 
     int y_pred;
     int sum{0};

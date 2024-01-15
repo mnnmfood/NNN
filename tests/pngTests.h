@@ -74,9 +74,9 @@ void testReset()
 void testBulk()
 {
     std::cout << "-- Test Bulk" << "\n";
-    size_t batch_size = 32;
+    int batch_size = 32;
     std::string fullpath {data_dir + "mnist_png/testing/0/"};
-    Matrix<std::string, Dynamic, Dynamic> index;
+    Tensor<std::string, 2> index;
     load_csv(fullpath + "index.csv", index);
 
     std::ifstream fp{fullpath + index(0, 0), std::ios::binary};
@@ -87,13 +87,13 @@ void testBulk()
     std::cout << width << ", " << height << "\n";
 
     Tensor<byte, 3> images(height, width, batch_size);
-    for(size_t i{0}; i < batch_size; i++){
+    for(int i{0}; i < batch_size; i++){
         std::ifstream fpi(fullpath + index(0, i), std::ios::binary);
         reader.reset(fpi);
         reader.read_arr(images.data() + total * i, width, height, PNG_COLOR_TYPE_GRAY);
     }
     images = transposed(images);
-    for(size_t i{0}; i < batch_size; i++){
+    for(int i{0}; i < batch_size; i++){
         Tensor<byte, 2> image0 = images.chip(i, 2);
         std::ofstream fpo(out_dir + "bulk_" + std::to_string(i) + ".png", std::ios::binary);
         png::PNGWriter writer(fpo, png::pngInfo(width, height));

@@ -3,18 +3,20 @@
 #include <iostream>
 #include <functional>
 #include <costs.h>
+#include "eigenFuns.h"
+#include "typedefs.h"
 
-using Eigen::Dynamic;
-using Eigen::Matrix;
+inline const array<int, 1> dims {0};
 
-float MSE::cost(const Matrix<float, Dynamic, Dynamic>& a, 
-                const Matrix<float, Dynamic, Dynamic>& y){
-    return (a-y).colwise().squaredNorm().sum();
+Tensor<float, 0> MSE::cost(const Tensor<float, 2>& a, 
+                const Tensor<float, 2>& y){
+    //return (a-y).colwise().squaredNorm().sum();
+    return (a-y).reduce(dims, SqNormReducer<float>()).sum();
 }
 
-Matrix<float, Dynamic, Dynamic> MSE::grad(
-        const Matrix<float, Dynamic, Dynamic>& a,
-        const Matrix<float, Dynamic, Dynamic>& y){
+Tensor<float, 2> MSE::grad(
+        const Tensor<float, 2>& a,
+        const Tensor<float, 2>& y){
     return (a - y);
 }
 
@@ -23,13 +25,13 @@ float cross_entropy(float a, float y){
 }
 
 
-float CrossEntropy::cost(const Matrix<float, Dynamic, Dynamic>& a, 
-            const Matrix<float, Dynamic, Dynamic>& y){
+Tensor<float, 0> CrossEntropy::cost(const Tensor<float, 2>& a, 
+            const Tensor<float, 2>& y){
     return -a.binaryExpr(y, std::ref(cross_entropy)).sum();
 }
 
-Matrix<float, Dynamic, Dynamic> CrossEntropy::grad(
-    const Matrix<float, Dynamic, Dynamic>& a,
-    const Matrix<float, Dynamic, Dynamic>& y){ 
+Tensor<float, 2> CrossEntropy::grad(
+    const Tensor<float, 2>& a,
+    const Tensor<float, 2>& y){ 
     return a - y;
 }
