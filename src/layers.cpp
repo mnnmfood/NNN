@@ -11,6 +11,8 @@ inline const array<int, 1> dims_rowwise {1};
 scalar_comparer_op<float> min_comparer([](float x, float y)->float {return x < y ? x: y;});
 scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y ? x: y;});
 
+inline const Eigen::array<Eigen::IndexPair<int>, 1> product_dims = 
+  {Eigen::IndexPair<int>(1, 0) };
 // Util class for weight initialization
 class NormalSample
 {
@@ -115,26 +117,29 @@ Tensor<float, 2> FCLayer::get_grad(){return _grad;}
 void FCLayer::fwd(){
     assert(_prev != nullptr);
     //_winputs = (_weights * _prev->get_act()).colwise() + _biases ;
-    _winputs = vecSum(_weights * _prev->get_act(), _biases);
+    _winputs = vecSum<float>(_weights.contract(_prev->get_act(), product_dims)
+                            , _biases, false);
     _act = act(_winputs);
 }
 
 void FCLayer::bwd(const Tensor<float, 2>& cost_grad){
     assert(_next == nullptr);
-    _nabla_b = cost_grad.cwiseProduct(grad_act(_winputs));
+    //_nabla_b = cost_grad.cwiseprod1uct(grad_act(_winputs));
+    _nabla_b = cost_grad * grad_act(_winputs);
     //_nabla_w = _nabla_b * _prev->get_act().transpose();
-    _nabla_w = _nabla_b * transposed(_prev->get_act());
+    _nabla_w = _nabla_b.contract(transposed(_prev->get_act()), product_dims);
     //_grad = _weights.transpose() * _nabla_b;
-    _grad = transposed(_weights) * _nabla_b;
+    _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
 void FCLayer::bwd(){
     assert(_next != nullptr);
-    _nabla_b = _next->get_grad().cwiseProduct(grad_act(_winputs));
+    //_nabla_b = _next->get_grad().cwiseprod1uct(grad_act(_winputs));
+    _nabla_b = _next->get_grad()*grad_act(_winputs);
     //_nabla_w = _nabla_b * _prev->get_act().transpose();
-    _nabla_w = _nabla_b * transposed(_prev->get_act());
+    _nabla_w = _nabla_b.contract(transposed(_prev->get_act()), product_dims);
     //_grad = _weights.transpose() * _nabla_b;
-    _grad = transposed(_weights) * _nabla_b;
+    _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
 // TODO: updating method should be specific to optimization strategy,
@@ -200,7 +205,8 @@ Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
     for(int i{0}; i < res.dimension(1); i++){
         res.chip(i, 1) = z.chip(i, 1).unaryExpr(usrExp(temp_sum(i) + temp_max(i)));
     }
-    return  res - res.cwiseProduct(res); 
+    return  res - res * res; 
+    //return  res - prod1(res, res); 
 }
 
 

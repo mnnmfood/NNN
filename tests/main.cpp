@@ -19,6 +19,15 @@ int main(){
     std::cout << "--TESTING PNG" << "\n";
     testPNG();
 
+
+    std::cout << "--TESTING INIT" << "\n";
+    testSequentialInit();
+    std::cout << "--TESTING Feed-forward" << "\n";
+    testFeedFwd();
+    std::cout << "--TESTING Backwards-propagation" << "\n";
+    testBackProp();
+
+#if 0
     std::cout << "--TESTING Mnist Data" << "\n";
     std::string dataDir {"../data/mnist_csv/"};
     //#std::vector<Vector<float, Dynamic>*> x;
@@ -47,17 +56,9 @@ int main(){
 
     model.SGD(x, y, 10, 10, 0.5, 0.00, val_x, val_y);
     //model.GD(x, y, 10, 0.5, 0.01, val_x, val_y);
-
-#if 0
     std::cout << std::setprecision(2);
     std::cout << "Final accuracy "  << model.accuracy(val_x, val_y)*100;
     std::cout << "%" << "\n\n";
 
-    std::cout << "--TESTING INIT" << "\n";
-    testSequentialInit();
-    std::cout << "--TESTING Feed-forward" << "\n";
-    testFeedFwd();
-    std::cout << "--TESTING Backwards-propagation" << "\n";
-    testBackProp();
 #endif
 }

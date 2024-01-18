@@ -25,18 +25,19 @@ private:
   Tensor<T, 1> m_vec;
   bool m_rowwise;
 };
+// R-value version
+template<typename T>
+Tensor<T, 2> vecSum(Tensor<T, 2>&& mat, Tensor<T, 1>& vec, bool rowwise=true){
+    return mat.nullaryExpr(VecsumOp(mat, vec, rowwise));
+}
 // L-value version
 template<typename T>
 Tensor<T, 2> vecSum(Tensor<T, 2>& mat, Tensor<T, 1>& vec, bool rowwise=true){
-    return mat.nullaryExpr(mat, vec, rowwise);
+    return mat.nullaryExpr(VecsumOp(mat, vec, rowwise));
 }
-// R-value version
-template<typename T>
-Tensor<T, 2> vecSum(Tensor<T, 2>& mat, Tensor<T, 1>& vec, bool rowwise=true){
-    return Tensor<T, 2>::NullaryExpr(mat, vec, rowwise);
-}
+// ---
 
-// -- Calculate squared norm of either rows or cols
+// --- Reducer: calculate squared norm of either rows or cols
 template <typename T> 
 struct SqNormReducer
 {
@@ -72,13 +73,13 @@ struct SqNormReducer
    }
  };
 
-// -- Scalar comparer for min-max calculation
+// --- Reducer: compare elements by condition
 template<typename T>
 struct scalar_comparer_op{
     scalar_comparer_op(std::function<T(T, T)> condition)
-    :m_condition{condition}{}
+    :m_condition{condition}, is_first{true} {}
 
-    void reduce(const T t, T* accum) const{
+    void reduce(const T t, T* accum){
         if(is_first){
             *accum = t;
             is_first = false;
@@ -114,9 +115,10 @@ struct scalar_comparer_op{
     }
 private:
     std::function<T(T, T)> m_condition;
-    bool is_first = true;
+    bool is_first;
 };
 
+// --- Reducer: cacluate min/max value rowwise or colwwise
 template<typename T>
 T min(const Tensor<T, 2>& t)
 {
@@ -135,7 +137,9 @@ T max(const Tensor<T, 2>& t)
     std::cout << "temp " << temp << " " << temp(0) << "\n";
     return temp(0);
 }
+// ---
 
+// --- Transpose tensor: by its first 2 dimensions
 template<typename ArgType>
 ArgType
 transposed(const ArgType& t){
@@ -147,6 +151,7 @@ transposed(const ArgType& t){
     return t.shuffle(shuffle_transpose);
 }
 
+// --- Unary-Op: normalize tensor to range 0-1
 struct max_normalize_op
 {
     max_normalize_op(Tensor<float, 2> t)
@@ -161,6 +166,56 @@ private:
     float m_min;
 };
 
+// -- Slice tensor along given dimension:
+template<int N>
+Tensor<float, N> sliced(const Tensor<float, N>& arg, const std::vector<int>& indices, int dim){
+  Eigen::array<Eigen::Index, N> out_size;
+  for(int i{0}; i < N; i++){
+    out_size[i] = arg.dimension(i);
+  }
+  out_size[dim] = indices.size();
 
+  Tensor<float, N> out_slice(out_size);
+  for(int i{0}; i < indices.size(); i++){
+    out_slice.chip(i, dim) = arg.chip(indices[i], dim);
+  }
+  return out_slice;
+}
+
+template<int N>
+Tensor<float, N> sliced(const Tensor<float, N>&& arg, const std::vector<int>& indices, int dim){
+  Eigen::array<Eigen::Index, N> out_size;
+  for(int i{0}; i < N; i++){
+    out_size[i] = arg.dimension(i);
+  }
+  out_size[dim] = indices.size();
+
+  Tensor<float, N> out_slice(out_size);
+  for(int i{0}; i < indices.size(); i++){
+    out_slice.chip(i, dim) = arg.chip(indices[i], dim);
+  }
+  return out_slice;
+}
+
+// -- Matrix product for tensors: l-value and r-value versions
+#if 0
+const Eigen::array<Eigen::IndexPair<int>, 1> product_dims = 
+  {Eigen::IndexPair<int>(1, 0) };
+Tensor<float, 2> prod1(const Tensor<float, 2>& a, const Tensor<float, 2>& b){
+  return a.contract(b, product_dims);
+}
+
+Tensor<float, 2> prod1(Tensor<float, 2>&& a, Tensor<float, 2>&& b){
+  return a.contract(b, product_dims);
+}
+
+Tensor<float, 2> prod1(Tensor<float, 2>&& a, const Tensor<float, 2>& b){
+  return a.contract(b, product_dims);
+}
+
+Tensor<float, 2> prod1(const Tensor<float, 2>& a, Tensor<float, 2>&& b){
+  return a.contract(b, product_dims);
+}
+#endif
 
 #endif

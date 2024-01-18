@@ -1,6 +1,7 @@
 #include <chrono>
 #include "layers.h"
 #include "sequential.h"
+#include "eigenFuns.h"
 
 
 // Sequential model
@@ -84,8 +85,10 @@ void Sequential2::SGD(Tensor<float, 2>& x,
         for(size_t l{0}; l < train_size-batch_size; l+=batch_size){
 
             std::copy_n(indices.begin()+l, batch_size, sub_indices.begin());
-            fwdProp(x(all, sub_indices)); 
-            bkwProp(y(all, sub_indices));
+            //fwdProp(x(all, sub_indices)); 
+            //bkwProp(y(all, sub_indices));
+            fwdProp(sliced(x, sub_indices, 1));
+            fwdProp(sliced(y, sub_indices, 1));
 
 
             for(size_t i{0}; i < num_layers; i++){
@@ -114,7 +117,8 @@ float Sequential2::accuracy(const Tensor<float, 2>& x, const Tensor<float, 2>& y
     int sum{0};
 
     for(Eigen::Index i{0}; i < test_size; i++){
-        pred.col(i).maxCoeff(&y_pred);
+        //pred.col(i).maxCoeff(&y_pred);
+        pred.chip(i, 1);
         sum += (static_cast<int>(y(i)) == y_pred);
     }
 
