@@ -73,7 +73,7 @@ void Sequential2::SGD(Tensor<float, 2>& x,
     init(batch_size);
 
     // Prepare random indices 
-    std::vector<int> indices;
+    std::vector<int> indices(train_size);
     std::vector<int> sub_indices(batch_size);
     for(size_t i{0}; i < train_size; i++){indices.push_back(i);} 
 
@@ -88,7 +88,7 @@ void Sequential2::SGD(Tensor<float, 2>& x,
             //fwdProp(x(all, sub_indices)); 
             //bkwProp(y(all, sub_indices));
             fwdProp(sliced(x, sub_indices, 1));
-            fwdProp(sliced(y, sub_indices, 1));
+            bkwProp(sliced(y, sub_indices, 1));
 
 
             for(size_t i{0}; i < num_layers; i++){
@@ -113,13 +113,13 @@ float Sequential2::accuracy(const Tensor<float, 2>& x, const Tensor<float, 2>& y
     fwdProp(x);
     Tensor<float, 2> pred = _layers.back()->get_act();
 
-    int y_pred;
+    Tensor<Eigen::Index, 0> y_pred;
     int sum{0};
 
     for(Eigen::Index i{0}; i < test_size; i++){
         //pred.col(i).maxCoeff(&y_pred);
-        pred.chip(i, 1);
-        sum += (static_cast<int>(y(i)) == y_pred);
+        y_pred = pred.chip(i, 1).argmax();
+        sum += (static_cast<int>(y(i)) == y_pred(0));
     }
 
     return static_cast<float>(sum) / static_cast<float>(test_size);

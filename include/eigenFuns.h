@@ -10,21 +10,29 @@
 template<typename T>
 struct VecsumOp
 {
-  VecsumOp(Tensor<T, 2>& mat, Tensor<T, 1>& vec, bool rowwise=true) :m_mat{mat}, m_vec{vec} {
+  VecsumOp(Tensor<T, 2>& mat, Tensor<T, 1>& vec, bool rowwise=true)
+    :m_mat{mat}, m_vec{vec}, m_rows{mat.dimension(0)}, m_cols{mat.dimension(1)}, 
+    m_rowwise{rowwise}
+  {
     if(rowwise){
       assert(m_mat.dimension(1)==m_vec.dimension(0));
     }else{
       assert(m_mat.dimension(0)==m_vec.dimension(0));
     }
   } 
-  const T operator()(Eigen::Index row, Eigen::Index col) const{
+  const T operator()(Eigen::Index idx) const{
+    Eigen::Index row = idx % m_rows; 
+    Eigen::Index col = idx / m_rows;
     return m_mat(row, col) + (m_rowwise?m_vec(col):m_vec(row));
   }
 private:
   Tensor<T, 2> m_mat;
   Tensor<T, 1> m_vec;
+  Eigen::Index m_rows;
+  Eigen::Index m_cols;
   bool m_rowwise;
 };
+
 // R-value version
 template<typename T>
 Tensor<T, 2> vecSum(Tensor<T, 2>&& mat, Tensor<T, 1>& vec, bool rowwise=true){
@@ -176,7 +184,7 @@ Tensor<float, N> sliced(const Tensor<float, N>& arg, const std::vector<int>& ind
   out_size[dim] = indices.size();
 
   Tensor<float, N> out_slice(out_size);
-  for(int i{0}; i < indices.size(); i++){
+  for(size_t i{0}; i < indices.size(); i++){
     out_slice.chip(i, dim) = arg.chip(indices[i], dim);
   }
   return out_slice;
@@ -196,26 +204,5 @@ Tensor<float, N> sliced(const Tensor<float, N>&& arg, const std::vector<int>& in
   }
   return out_slice;
 }
-
-// -- Matrix product for tensors: l-value and r-value versions
-#if 0
-const Eigen::array<Eigen::IndexPair<int>, 1> product_dims = 
-  {Eigen::IndexPair<int>(1, 0) };
-Tensor<float, 2> prod1(const Tensor<float, 2>& a, const Tensor<float, 2>& b){
-  return a.contract(b, product_dims);
-}
-
-Tensor<float, 2> prod1(Tensor<float, 2>&& a, Tensor<float, 2>&& b){
-  return a.contract(b, product_dims);
-}
-
-Tensor<float, 2> prod1(Tensor<float, 2>&& a, const Tensor<float, 2>& b){
-  return a.contract(b, product_dims);
-}
-
-Tensor<float, 2> prod1(const Tensor<float, 2>& a, Tensor<float, 2>&& b){
-  return a.contract(b, product_dims);
-}
-#endif
 
 #endif

@@ -116,7 +116,6 @@ Tensor<float, 2> FCLayer::get_grad(){return _grad;}
 
 void FCLayer::fwd(){
     assert(_prev != nullptr);
-    //_winputs = (_weights * _prev->get_act()).colwise() + _biases ;
     _winputs = vecSum<float>(_weights.contract(_prev->get_act(), product_dims)
                             , _biases, false);
     _act = act(_winputs);
@@ -124,21 +123,16 @@ void FCLayer::fwd(){
 
 void FCLayer::bwd(const Tensor<float, 2>& cost_grad){
     assert(_next == nullptr);
-    //_nabla_b = cost_grad.cwiseprod1uct(grad_act(_winputs));
     _nabla_b = cost_grad * grad_act(_winputs);
-    //_nabla_w = _nabla_b * _prev->get_act().transpose();
     _nabla_w = _nabla_b.contract(transposed(_prev->get_act()), product_dims);
-    //_grad = _weights.transpose() * _nabla_b;
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
 void FCLayer::bwd(){
     assert(_next != nullptr);
-    //_nabla_b = _next->get_grad().cwiseprod1uct(grad_act(_winputs));
-    _nabla_b = _next->get_grad()*grad_act(_winputs);
-    //_nabla_w = _nabla_b * _prev->get_act().transpose();
+    _nabla_b = _next->get_grad() * grad_act(_winputs);
     _nabla_w = _nabla_b.contract(transposed(_prev->get_act()), product_dims);
-    //_grad = _weights.transpose() * _nabla_b;
+
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
@@ -146,7 +140,6 @@ void FCLayer::bwd(){
 // this should not be here
 void FCLayer::update(float rate, float mu, float size){
     _weights = (1 - rate * mu / size) * _weights.eval()- (rate / size) * _nabla_w;
-    //_biases -= (rate / size) * (_nabla_b.rowwise().sum());
     _biases -= (rate / size) * (_nabla_b.sum(dims_rowwise));
 }
 
@@ -172,7 +165,6 @@ Tensor<float, 2> TanhLayer::grad_act(const Tensor<float, 2>& z){
 
 // SoftMax Layer
 Tensor<float, 2> SoftMaxLayer::act(const Tensor<float, 2>& z){
-    //Tensor<float, 2> temp_max = z.colwise().maxCoeff();
     Tensor<float, 2> temp_max = z.reduce(dims_colwise, max_comparer);
     Tensor<float, 2> temp_exp{z.dimension(0), z.dimension(1)};
 
@@ -180,18 +172,15 @@ Tensor<float, 2> SoftMaxLayer::act(const Tensor<float, 2>& z){
         temp_exp.chip(i, 1) = z.chip(i, 1).unaryExpr(usrExp(temp_max(i)));
     }
 
-    //Tensor<float, 1> temp_sum = temp_exp.colwise().sum().unaryExpr(std::ref(usrLog));
     Tensor<float, 1> temp_sum = temp_exp.sum(dims_colwise).unaryExpr(std::ref(usrLog));
     Tensor<float, 2> res(z.dimension(0), z.dimension(1));
     for(int i{0}; i < res.dimension(1); i++){
-        //res.chip(i, 1) = z.chip(i, 1).unaryExpr(usrExp(temp_sum(i) + temp_max(i)));
         res.chip(i, 1) = z.chip(i, 1).unaryExpr(usrExp(temp_sum(i) + temp_max(i)));
     }
     return res;
 }
 
 Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
-    //Tensor<float, 2> temp_max = z.colwise().maxCoeff();
     Tensor<float, 2> temp_max = z.reduce(dims_colwise, max_comparer);
     Tensor<float, 2> temp_exp{z.dimension(0), z.dimension(1)};
 
@@ -199,7 +188,6 @@ Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
         temp_exp.chip(i, 1) = z.chip(i, 1).unaryExpr(usrExp(temp_max(i)));
     }
 
-    //Tensor<float, 1> temp_sum = temp_exp.colwise().sum().unaryExpr(std::ref(usrLog));
     Tensor<float, 1> temp_sum = temp_exp.sum(dims_colwise).unaryExpr(std::ref(usrLog));
     Tensor<float, 2> res(z.dimension(0), z.dimension(1));
     for(int i{0}; i < res.dimension(1); i++){
