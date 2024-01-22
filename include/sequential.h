@@ -6,10 +6,7 @@
 #include <initializer_list>
 #include "layers.h"
 #include "costs.h"
-
-using Eigen::MatrixXf;
-using Eigen::VectorXf;
-using Eigen::all;
+#include "typedefs.h"
 
 class Sequential2
 {
@@ -21,14 +18,14 @@ public:
     const size_t num_layers;
     Sequential2(std::initializer_list<Layer*> layers, CostFun* cost);
     void init(size_t n_samples);
-    void bkwProp(const MatrixXf&);
-    void fwdProp(const MatrixXf&);
-    void SGD(Matrix<float, Dynamic, Dynamic>& x,
-            Matrix<float, Dynamic, Dynamic>& y, 
+    void bkwProp(const Tensor<float, 2>&);
+    void fwdProp(const Tensor<float, 2>&);
+    void SGD(Tensor<float, 2>& x,
+            Tensor<float, 2>& y, 
             int epochs, int batch_size, float lr, float mu,
-            Matrix<float, Dynamic, Dynamic>& val_x,
-            Matrix<float, Dynamic, Dynamic>&val_y);
-    float accuracy(const MatrixXf&x, const MatrixXf& y);
+            Tensor<float, 2>& val_x,
+            Tensor<float, 2>&val_y);
+    float accuracy(const Tensor<float, 2>&x, const Tensor<float, 2>& y);
     ~Sequential2();
 
 

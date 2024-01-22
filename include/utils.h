@@ -7,14 +7,12 @@
 #include <fstream>
 #include <Eigen/Dense>
 #include <vector>
+#include "typedefs.h"
 
-using Eigen::Matrix;
-using Eigen::Vector;
-using Eigen::Map;
-using Eigen::Dynamic;
+template<typename ArgType>
+int load_csv(std::string fpath, ArgType& data){
+    typedef typename ArgType::Scalar Scalar;
 
-template<typename Scalar>
-int load_csv(std::string fpath, Matrix<Scalar, Dynamic, Dynamic>& data){
     std::ifstream fin;
     fin.open(fpath);
     std::string line, word; 
@@ -44,14 +42,14 @@ int load_csv(std::string fpath, Matrix<Scalar, Dynamic, Dynamic>& data){
     lines -= 1;
     std::cout << "Samples: " << lines << '\n';
     fin.close();
-    data = Map<Matrix<Scalar, Dynamic, Dynamic>>(temp.data(), 
+    data = TensorMap<ArgType> (temp.data(), 
            temp.size()/lines, lines);
     std::cout << "Size: " << temp.size() << "\n\n";
     // Each column is a sample
     return 1;
 }
 
-int load_csv(std::string fpath, Matrix<std::string, Dynamic, Dynamic>&data)
+int load_csv(std::string fpath, Tensor<std::string, 2>& data)
 {
     std::ifstream fin;
     fin.open(fpath);
@@ -82,7 +80,7 @@ int load_csv(std::string fpath, Matrix<std::string, Dynamic, Dynamic>&data)
     lines -= 1;
     std::cout << "Samples: " << lines << '\n';
     fin.close();
-    data = Map<Matrix<std::string, Dynamic, Dynamic>>(temp.data(), 
+    data = TensorMap<Tensor<std::string, 2>> (temp.data(), 
            temp.size()/lines, lines);
     std::cout << "Size: " << temp.size() << "\n\n";
     // Each column is a sample

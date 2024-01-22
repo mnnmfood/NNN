@@ -3,10 +3,7 @@
 
 #include<Eigen/Dense>
 #include<random>
-
-using Eigen::MatrixXf;
-using Eigen::VectorXf;
-using Eigen::Dynamic;
+#include "typedefs.h"
 
 inline std::random_device rd{};
 inline std::mt19937 gen{rd()};
@@ -20,15 +17,15 @@ public:
     Layer* _prev = nullptr;
 
     virtual void fwd() = 0;
-    virtual void fwd(const MatrixXf&) = 0;
+    virtual void fwd(const Tensor<float, 2>&) = 0;
     virtual void bwd() = 0;
-    virtual void bwd(const MatrixXf&) = 0;
+    virtual void bwd(const Tensor<float, 2>&) = 0;
 
     virtual void init(size_t){}
     virtual void initParams(size_t) = 0;
 
-    virtual MatrixXf get_act() = 0;
-    virtual MatrixXf get_grad() = 0;
+    virtual Tensor<float, 2> get_act() = 0;
+    virtual Tensor<float, 2> get_grad() = 0;
 
     Layer* next();
     Layer* prev();
@@ -40,34 +37,34 @@ public:
 
 class InputLayer: public Layer
 {
-    MatrixXf _act;
+    Tensor<float, 2> _act;
 public:
     InputLayer(size_t);
     void init(size_t n_samples);
     void initParams(size_t size){}
 
     void fwd(){}
-    void fwd(const MatrixXf&);
+    void fwd(const Tensor<float, 2>&);
     void bwd(){};
-    void bwd(const MatrixXf&){};
+    void bwd(const Tensor<float, 2>&){};
 
-    virtual MatrixXf get_act();
-    virtual MatrixXf get_grad();
+    virtual Tensor<float, 2> get_act();
+    virtual Tensor<float, 2> get_grad();
 };
 
 class FCLayer: public Layer
 {
 protected:
-    MatrixXf _weights;
-    VectorXf _biases;
+    Tensor<float, 2> _weights;
+    Tensor<float, 1> _biases;
 
-    MatrixXf _winputs; 
+    Tensor<float, 2> _winputs; 
 
-    MatrixXf _act;
-    MatrixXf _grad;
+    Tensor<float, 2> _act;
+    Tensor<float, 2> _grad;
 
-    MatrixXf _nabla_b;
-    MatrixXf _nabla_w;
+    Tensor<float, 2> _nabla_b;
+    Tensor<float, 2> _nabla_w;
 
 public:
     FCLayer(size_t size);
@@ -77,14 +74,14 @@ public:
     void fwd();
     void bwd();
 
-    void fwd(const MatrixXf&){}
-    void bwd(const MatrixXf&);
+    void fwd(const Tensor<float, 2>&){}
+    void bwd(const Tensor<float, 2>&);
 
-    virtual MatrixXf act(const MatrixXf&) = 0;
-    virtual MatrixXf grad_act(const MatrixXf&) = 0;
+    virtual Tensor<float, 2> act(const Tensor<float, 2>&) = 0;
+    virtual Tensor<float, 2> grad_act(const Tensor<float, 2>&) = 0;
 
-    virtual MatrixXf get_act();
-    virtual MatrixXf get_grad();
+    virtual Tensor<float, 2> get_act();
+    virtual Tensor<float, 2> get_grad();
 
     virtual ~FCLayer() = default;
 
@@ -95,22 +92,22 @@ class SigmoidLayer: public FCLayer
 {
 public:
     SigmoidLayer(size_t size); 
-    MatrixXf act(const MatrixXf&);
-    MatrixXf grad_act(const MatrixXf&);
+    Tensor<float, 2> act(const Tensor<float, 2>&);
+    Tensor<float, 2> grad_act(const Tensor<float, 2>&);
 };
 
 class TanhLayer: public FCLayer
 {
 public:
-    MatrixXf act(const MatrixXf&);
-    MatrixXf grad_act(const MatrixXf&);
+    Tensor<float, 2> act(const Tensor<float, 2>&);
+    Tensor<float, 2> grad_act(const Tensor<float, 2>&);
 };
 
 class SoftMaxLayer: public FCLayer
 {
 public:
-    MatrixXf act(const MatrixXf&);
-    MatrixXf grad_act(const MatrixXf&);
+    Tensor<float, 2> act(const Tensor<float, 2>&);
+    Tensor<float, 2> grad_act(const Tensor<float, 2>&);
 };
 
 #endif
