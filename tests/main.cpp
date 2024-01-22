@@ -30,18 +30,18 @@ int main(){
     //#std::vector<Vector<float, Dynamic>*> x;
     Tensor<float, 2> x;
     load_csv(dataDir + "train_x.csv", x);
-    std::cout << "Shape x: " << x.dimension(0) << ", " << x.dimension(1)<< '\n';
+    std::cout << "Training Shape x: " << x.dimension(0) << ", " << x.dimension(1)<< '\n';
     Tensor<float, 2> y;
     load_csv(dataDir + "train_y.csv", y);
-    std::cout << "Shape y: " << y.dimension(0) << ", " << y.dimension(1)<< '\n';
+    std::cout << "Training Shape y: " << y.dimension(0) << ", " << y.dimension(1)<< '\n';
 
     Tensor<float, 2> val_x;
     load_csv(dataDir + "val_x.csv", val_x);
-    std::cout << "Shape x: " << val_x.dimension(0) << ", " << val_x.dimension(1)<< '\n';
+    std::cout << "Validation Shape x: " << val_x.dimension(0) << ", " << val_x.dimension(1)<< '\n';
 
     Tensor<float, 2> val_y;
     load_csv(dataDir + "val_y.csv", val_y);
-    std::cout << "Shape y: " << val_y.dimension(0) << ", " << val_y.dimension(1)<< '\n';
+    std::cout << "Validation Shape y: " << val_y.dimension(0) << ", " << val_y.dimension(1)<< '\n';
 
     // network architecture
     Sequential2 model({
@@ -51,8 +51,13 @@ int main(){
         }
         , new MSE());
 
-    model.SGD(x, y, 20, 10, 0.5, 0.00, val_x, val_y);
-    //model.GD(x, y, 10, 0.5, 0.01, val_x, val_y);
+    // Optimize using Stochastic Gradient Descent
+    int epochs = 20;
+    int batch_size = 10;
+    float learning_rate = 0.5;
+    float momentum = 0.0;
+    model.SGD(x, y, epochs, batch_size, learning_rate, momentum, val_x, val_y);
+
     std::cout << std::setprecision(2);
     std::cout << "Final accuracy "  << model.accuracy(val_x, val_y)*100;
     std::cout << "%" << "\n\n";

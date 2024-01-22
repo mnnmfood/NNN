@@ -85,8 +85,6 @@ void Sequential2::SGD(Tensor<float, 2>& x,
         for(size_t l{0}; l < train_size-batch_size; l+=batch_size){
 
             std::copy_n(indices.begin()+l, batch_size, sub_indices.begin());
-            //fwdProp(x(all, sub_indices)); 
-            //bkwProp(y(all, sub_indices));
             fwdProp(sliced(x, sub_indices, 1));
             bkwProp(sliced(y, sub_indices, 1));
 
