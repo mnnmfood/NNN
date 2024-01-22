@@ -2,7 +2,9 @@
 ## Description
 Novice Neural Networks:
 
-Neural networks built from scratch using Eigen Tensor module. An example of its use can be found in the file **tests/main.cpp**. This repo also contains a custom made wrapper around [libpng](http://www.libpng.org/).
+Neural networks built from scratch using Eigen Tensor module. An example of its use can be found in the file **tests/main.cpp**. 
+
+This repo also contains a custom made wrapper around [libpng](http://www.libpng.org/). An example of its use can be found in the file  **tests/pngTests.h**
 #### Types of layers implemented (in the process of adding convolutional and max-pooling layers):
  - Sigmoid
  - Tanh
