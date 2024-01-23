@@ -57,17 +57,13 @@ public:
 };
 
  // Generic Layer
-Layer::Layer(size_t size)
-    :_size{size}
-{
-
-}
+Layer::Layer(size_t size) :_size{size} {}
 Layer* Layer::next(){return _next;}
 Layer* Layer::prev(){return _prev;}
 
 // Input Layer
 InputLayer::InputLayer(size_t size)
-    :Layer{size}
+    :Layer {size}
 {
 }
 
@@ -90,11 +86,12 @@ Tensor<float, 2> InputLayer::get_grad(){
 
 // Fully connected layer
 FCLayer::FCLayer(size_t size)
-    :Layer{size}
+   :Layer {size}
 {
 }
 
-void FCLayer::initParams(size_t prev_size){
+void FCLayer::initParams(){
+    size_t prev_size = _prev->_size;
     NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
         static_cast<float>(prev_size)
     ));
@@ -197,4 +194,35 @@ Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
     //return  res - prod1(res, res); 
 }
 
+// Convolutional layer
 
+ConvolLayer::ConvolLayer(std::array<int, 3> shape)
+    :Layer{shape[0]*shape[1]*shape[2]}, _shape{shape}
+{
+}
+
+void ConvolLayer::init(size_t n_samples){
+    _output_shape = {static_cast<int>(_size), static_cast<int>(n_samples)}; 
+    _act = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
+    _grad = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
+    _winputs = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
+    _nabla_b = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
+    _nabla_w = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
+}
+
+void ConvolLayer::initParams(){
+    size_t prev_size = _prev->getSize();
+    NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
+        static_cast<float>(prev_size)
+    ));
+    _weights = Tensor<float, 3>(_shape[0], _shape[1], _shape[2]);
+    _biases = Tensor<float, 2>(_shape[2]);
+}
+
+Tensor<float, 4> ConvolLayer::get_act() {return _act;}
+Tensor<float, 4> ConvolLayer::get_grad() {return _grad;}
+
+void ConvolLayer::fwd(){
+    assert(_prev != nullptr);
+    _winputs = _prev->get_act().reshape()
+}

@@ -35,12 +35,12 @@ private:
 
 // R-value version
 template<typename T>
-Tensor<T, 2> vecSum(Tensor<T, 2>&& mat, Tensor<T, 1>& vec, bool rowwise=true){
+auto vecSum(Tensor<T, 2>&& mat, Tensor<T, 1>& vec, bool rowwise=true){
     return mat.nullaryExpr(VecsumOp(mat, vec, rowwise));
 }
 // L-value version
 template<typename T>
-Tensor<T, 2> vecSum(Tensor<T, 2>& mat, Tensor<T, 1>& vec, bool rowwise=true){
+auto vecSum(Tensor<T, 2>& mat, Tensor<T, 1>& vec, bool rowwise=true){
     return mat.nullaryExpr(VecsumOp(mat, vec, rowwise));
 }
 // ---

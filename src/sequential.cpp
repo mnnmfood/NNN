@@ -12,13 +12,11 @@ Sequential2::Sequential2(std::initializer_list<Layer*> layers, CostFun* cost)
     // connect forward
     _layers[0]->_prev = nullptr;
     Layer* prev_layer = _layers[0];
-    size_t prev_size = _layers[0]->_size;
 
     for(size_t i{1}; i < num_layers; i++){
         _layers[i]->_prev = prev_layer;
-        _layers[i]->initParams(prev_size);
+        _layers[i]->initParams();
 
-        prev_size = _layers[i]->_size;
         prev_layer = _layers[i];
     }
     // connect backwards
