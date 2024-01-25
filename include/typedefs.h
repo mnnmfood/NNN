@@ -7,6 +7,6 @@ using Eigen::Vector;
 using Eigen::MatrixXf;
 using Eigen::VectorXf;
 using Eigen::TensorMap;
-using Eigen::array;
+using Eigen::Index;
 
 using byte = unsigned char;

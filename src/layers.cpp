@@ -5,8 +5,9 @@
 #include "eigenFuns.h"
 #include "typedefs.h"
 
-inline const array<int, 1> dims_colwise {0};
-inline const array<int, 1> dims_rowwise {1};
+inline const std::array<int, 1> dims_colwise {0};
+inline const std::array<int, 1> dims_rowwise {1};
+inline const std::array<int, 2> dims_convolve {0, 1};
 
 scalar_comparer_op<float> min_comparer([](float x, float y)->float {return x < y ? x: y;});
 scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y ? x: y;});
@@ -57,55 +58,35 @@ public:
 };
 
  // Generic Layer
-Layer::Layer(size_t size) :_size{size} {}
-Layer* Layer::next(){return _next;}
-Layer* Layer::prev(){return _prev;}
-
-// Input Layer
-InputLayer::InputLayer(size_t size)
-    :Layer {size}
-{
-}
-
-void InputLayer::init(size_t n_samples){
-    _act = Tensor<float, 2>(_size, n_samples);
-}
-
-void InputLayer::fwd(const Tensor<float, 2>& input){
-    _act = input;
-}
-
-Tensor<float, 2> InputLayer::get_act(){
-    return _act;
-}
-
-Tensor<float, 2> InputLayer::get_grad(){
-    return _act;
-}
-
+BaseLayer::BaseLayer(int depth) :_depth{depth} {}
+BaseLayer* BaseLayer::next(){return _next;}
+BaseLayer* BaseLayer::prev(){return _prev;}
 
 // Fully connected layer
-FCLayer::FCLayer(size_t size)
-   :Layer {size}
+FCLayer::FCLayer(Index size)
+   :Layer {std::array<Index, 1> {size}}
 {
+    _output_shape = _shape;
 }
 
 void FCLayer::initParams(){
-    size_t prev_size = _prev->_size;
+    // Make sure previous Layer is compatible
+    assert(_prev->_depth == 1);
+    std::array<Index, 1> prev_size = dynamic_cast<Layer<1>*>(_prev)->_shape;
     NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
-        static_cast<float>(prev_size)
+        static_cast<float>(prev_size[0])
     ));
 
-    _weights = Tensor<float, 2>(_size, prev_size).unaryExpr(std::ref(sampleFun));
-    _biases = Tensor<float, 1>(_size).unaryExpr(std::ref(sampleFun));
+    _weights = Tensor<float, 2>(_shape[0], prev_size[0]).unaryExpr(std::ref(sampleFun));
+    _biases = Tensor<float, 1>(_shape[0]).unaryExpr(std::ref(sampleFun));
 }
 
-void FCLayer::init(size_t n_samples){
-    _act = Tensor<float, 2>(_size, n_samples); 
-    _grad = Tensor<float, 2>(_size, n_samples); 
-    _winputs = Tensor<float, 2>(_size, n_samples);
-    _nabla_b = Tensor<float, 2>(_size, n_samples); 
-    _nabla_w = Tensor<float, 2>(_size, n_samples); 
+void FCLayer::init(Index n_samples){
+    _act = Tensor<float, 2>(_shape[0], n_samples); 
+    _grad = Tensor<float, 2>(_shape[0], n_samples); 
+    _winputs = Tensor<float, 2>(_shape[0], n_samples);
+    _nabla_b = Tensor<float, 2>(_shape[0], n_samples); 
+    _nabla_w = Tensor<float, 2>(_shape[0], n_samples); 
 }
 
 Tensor<float, 2> FCLayer::get_act(){return _act;}
@@ -113,22 +94,28 @@ Tensor<float, 2> FCLayer::get_grad(){return _grad;}
 
 void FCLayer::fwd(){
     assert(_prev != nullptr);
-    _winputs = vecSum<float>(_weights.contract(_prev->get_act(), product_dims)
+    Layer<1>* prev {dynamic_cast<Layer<1>*>(_prev)};
+    _winputs = vecSum<float>(_weights.contract(prev->get_act(), product_dims)
                             , _biases, false);
     _act = act(_winputs);
 }
 
+void FCLayer::fwd(const Tensor<float, 2>& input){}
+
 void FCLayer::bwd(const Tensor<float, 2>& cost_grad){
     assert(_next == nullptr);
+    Layer<1>* prev {dynamic_cast<Layer<1>*>(_prev)};
     _nabla_b = cost_grad * grad_act(_winputs);
-    _nabla_w = _nabla_b.contract(transposed(_prev->get_act()), product_dims);
+    _nabla_w = _nabla_b.contract(transposed(prev->get_act()), product_dims);
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
 void FCLayer::bwd(){
     assert(_next != nullptr);
-    _nabla_b = _next->get_grad() * grad_act(_winputs);
-    _nabla_w = _nabla_b.contract(transposed(_prev->get_act()), product_dims);
+    Layer<1>* next {dynamic_cast<Layer<1>*>(_next)};
+    Layer<1>* prev {dynamic_cast<Layer<1>*>(_prev)};
+    _nabla_b = next->get_grad() * grad_act(_winputs);
+    _nabla_w = _nabla_b.contract(transposed(prev->get_act()), product_dims);
 
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
@@ -141,7 +128,7 @@ void FCLayer::update(float rate, float mu, float size){
 }
 
 // Sigmoid layer
-SigmoidLayer::SigmoidLayer(size_t size) :FCLayer{size}{}
+SigmoidLayer::SigmoidLayer(Index size) :FCLayer{size}{}
 
 Tensor<float, 2> SigmoidLayer::act(const Tensor<float, 2>& z){
     return z.unaryExpr(std::ref(logistic));
@@ -152,6 +139,7 @@ Tensor<float, 2> SigmoidLayer::grad_act(const Tensor<float, 2>& z){
 }
 
 // Tanh Layer
+TanhLayer::TanhLayer(Index size) :FCLayer{size}{}
 Tensor<float, 2> TanhLayer::act(const Tensor<float, 2>& z){
     return z.unaryExpr(std::ref(tanhc));
 }
@@ -161,6 +149,7 @@ Tensor<float, 2> TanhLayer::grad_act(const Tensor<float, 2>& z){
 }
 
 // SoftMax Layer
+SoftMaxLayer::SoftMaxLayer(Index size) :FCLayer{size}{}
 Tensor<float, 2> SoftMaxLayer::act(const Tensor<float, 2>& z){
     Tensor<float, 2> temp_max = z.reduce(dims_colwise, max_comparer);
     Tensor<float, 2> temp_exp{z.dimension(0), z.dimension(1)};
@@ -196,27 +185,44 @@ Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
 
 // Convolutional layer
 
-ConvolLayer::ConvolLayer(std::array<int, 3> shape)
-    :Layer{shape[0]*shape[1]*shape[2]}, _shape{shape}
+ConvolLayer::ConvolLayer(std::array<Index, 3> shape)
+    :Layer<3> {shape}
 {
 }
 
-void ConvolLayer::init(size_t n_samples){
-    _output_shape = {static_cast<int>(_size), static_cast<int>(n_samples)}; 
-    _act = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
-    _grad = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
-    _winputs = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
-    _nabla_b = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
-    _nabla_w = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
+void ConvolLayer::init(Index n_samples){
+    std::array<Index, 3> prev_shape = 
+        dynamic_cast<Layer<3>*>(_prev)->_output_shape;
+    _act = Tensor<float, 4>(_output_shape[0], _output_shape[1], 
+        _output_shape[2], n_samples);
+
+    _grad = Tensor<float, 4>(prev_shape[0], prev_shape[1], 
+        prev_shape[2], n_samples);
+    _winputs = Tensor<float, 4>(prev_shape[0], prev_shape[1], 
+        prev_shape[2], n_samples);
+
+    _nabla_b = Tensor<float, 2>(_shape[2], n_samples);
+    _nabla_w = Tensor<float, 4>(_shape[0], _shape[1], 
+        _shape[2], n_samples);
 }
 
 void ConvolLayer::initParams(){
-    size_t prev_size = _prev->getSize();
+    // Make sure previous Layer is compatible
+    assert(_prev->_depth == 3);
     NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
-        static_cast<float>(prev_size)
-    ));
-    _weights = Tensor<float, 3>(_shape[0], _shape[1], _shape[2]);
-    _biases = Tensor<float, 2>(_shape[2]);
+        static_cast<float>(_shape[0]*_shape[1])
+        ));
+    std::array<Index, 3> prev_shape = 
+        dynamic_cast<Layer<3>*>(_prev)->_output_shape;
+    _output_shape = std::array<Index, 3>{
+        prev_shape[0] - _shape[0] +1,
+        prev_shape[1] - _shape[1] +1,
+        prev_shape[2] * _shape[2]};
+
+    _weights = Tensor<float, 3>(_shape)
+        .unaryExpr(std::ref(sampleFun));
+    _biases = Tensor<float, 1>(_shape[2])
+        .unaryExpr(std::ref(sampleFun));
 }
 
 Tensor<float, 4> ConvolLayer::get_act() {return _act;}
@@ -224,5 +230,23 @@ Tensor<float, 4> ConvolLayer::get_grad() {return _grad;}
 
 void ConvolLayer::fwd(){
     assert(_prev != nullptr);
-    _winputs = _prev->get_act().reshape()
+    Layer<1>* prev {dynamic_cast<Layer<1>*>(_prev)};
+    _winputs = prev->get_act();
 }
+
+void ConvolLayer::bwd(){
+    assert(_next != nullptr);
+    Layer<1>* next {dynamic_cast<Layer<1>*>(_next)};
+    Layer<1>* prev {dynamic_cast<Layer<1>*>(_prev)};
+}
+
+Tensor<float, 4> ConvolLayer::act(const Tensor<float, 4>& z){return z;}
+Tensor<float, 4> ConvolLayer::grad_act(const Tensor<float, 4>& z){return z;}
+
+void ConvolLayer::update(float rate, float mu, float size){
+    _weights = (1 - rate * mu / size) * _weights.eval()- (rate / size) * _nabla_w;
+    _biases -= (rate / size) * (_nabla_b.sum(dims_rowwise));
+}
+
+void ConvolLayer::fwd(const Tensor<float, 4>&){};
+void ConvolLayer::bwd(const Tensor<float, 4>&){};

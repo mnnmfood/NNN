@@ -130,7 +130,7 @@ private:
 template<typename T>
 T min(const Tensor<T, 2>& t)
 {
-    array<Eigen::Index, 2> dims({0, 1});
+    std::array<Eigen::Index, 2> dims({0, 1});
     scalar_comparer_op<T> comparer([](T x, T y)->T {return x < y ? x: y;});
     Tensor<T, 0> temp = t.reduce(dims, comparer);
     return temp(0);
@@ -139,7 +139,7 @@ T min(const Tensor<T, 2>& t)
 template<typename T>
 T max(const Tensor<T, 2>& t)
 {
-    array<Eigen::Index, 2> dims({0, 1});
+    std::array<Eigen::Index, 2> dims({0, 1});
     scalar_comparer_op<T> comparer( [](T x, T y)->T {return x > y ? x: y;});
     Tensor<T, 0> temp = t.reduce(dims, comparer);
     std::cout << "temp " << temp << " " << temp(0) << "\n";

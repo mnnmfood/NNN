@@ -1,6 +1,7 @@
 #ifndef LAYERS_H
 #define LAYERS_H
 
+#include <array>
 #include<Eigen/Dense>
 #include<random>
 #include "typedefs.h"
@@ -8,51 +9,87 @@
 inline std::random_device rd{};
 inline std::mt19937 gen{rd()};
 
-class Layer
+class BaseLayer
 {
 public:
-    Layer(size_t);
-    Layer* _next = nullptr;
-    Layer* _prev = nullptr;
+    BaseLayer(int);
+    BaseLayer* _next = nullptr;
+    BaseLayer* _prev = nullptr;
 
     virtual void fwd() = 0;
-    virtual void fwd(const Tensor<float, 2>&) = 0;
     virtual void bwd() = 0;
-    virtual void bwd(const Tensor<float, 2>&) = 0;
 
     virtual void init(size_t){}
     virtual void initParams() = 0;
 
-    virtual Tensor<float, 2> get_act() = 0;
-    virtual Tensor<float, 2> get_grad() = 0;
+    BaseLayer* next();
+    BaseLayer* prev();
 
-    Layer* next();
-    Layer* prev();
-
-    virtual ~Layer() = default;
+    virtual ~BaseLayer() = default;
 
     virtual void update(float rate, float mu, float size){}; 
+    int _depth = 0;
 };
 
-class InputLayer: public Layer
+template<int N>
+class Layer: public BaseLayer
 {
-    Tensor<float, 2> _act;
 public:
-    const size_t _size = 0;
-    InputLayer(size_t);
-    void init(size_t n_samples);
+    std::array<Index, N> _shape;
+    std::array<Index, N> _output_shape;
+    Layer(std::array<Index, N>& shape)
+        :BaseLayer{N}, _shape{shape}
+    {
+    }
+    Layer(std::array<Index, N>&& shape)
+        :BaseLayer{N}, _shape{shape}
+    {
+    }
+    virtual void fwd() = 0;
+    virtual void fwd(const Tensor<float, N+1>&) = 0;
+    virtual void bwd() = 0;
+    virtual void bwd(const Tensor<float, N+1>&) = 0;
+    virtual void init(size_t){}
+    virtual void initParams() = 0;
+    virtual Tensor<float, N+1> get_act() = 0;
+    virtual Tensor<float, N+1> get_grad() = 0;
+    virtual void update(float rate, float mu, float size){}; 
+    virtual ~Layer() = default;
+};
+
+template<size_t N>
+class InputLayer: public Layer<N>
+{
+    Tensor<float, N+1> _act;
+public:
+    InputLayer(std::array<Index, N> shape)
+        :Layer<N>(shape)
+    {
+    }
+    void init(Index n_samples){
+        std::array<Index, N+1> temp;
+        std::copy_n(this->_shape.begin(), N, temp);
+        temp.back() = n_samples;
+        _act = Tensor<float, N+1> (temp);
+    }
     void initParams(){}
 
     void fwd(){}
-    void fwd(const Tensor<float, 2>&);
+    void fwd(const Tensor<float, N+1>& input){
+        _act = input;
+    }
     void bwd(){};
-    void bwd(const Tensor<float, 2>&){};
+    void bwd(const Tensor<float, N+1>&){};
 
-    virtual Tensor<float, 2> get_act();
-    virtual Tensor<float, 2> get_grad();
+    Tensor<float, N+1> get_act(){
+        return _act;
+    }
+    Tensor<float, N+1> get_grad(){
+        return _act;
+    }
 };
 
-class FCLayer: public Layer
+class FCLayer: public Layer<1>
 {
 protected:
     Tensor<float, 2> _weights;
@@ -67,14 +104,13 @@ protected:
     Tensor<float, 2> _nabla_w;
 
 public:
-    const size_t _size = 0;
-    FCLayer(size_t size);
-    void init(size_t n_samples);
+    FCLayer(Index size);
+    void init(Index n_samples);
     void initParams();
 
     void fwd();
     void bwd();
-
+    void fwd(const Tensor<float, 2>&);
     void bwd(const Tensor<float, 2>&);
 
     virtual Tensor<float, 2> act(const Tensor<float, 2>&) = 0;
@@ -91,7 +127,7 @@ public:
 class SigmoidLayer: public FCLayer
 {
 public:
-    SigmoidLayer(size_t size); 
+    SigmoidLayer(Index size); 
     Tensor<float, 2> act(const Tensor<float, 2>&);
     Tensor<float, 2> grad_act(const Tensor<float, 2>&);
 };
@@ -99,6 +135,7 @@ public:
 class TanhLayer: public FCLayer
 {
 public:
+    TanhLayer(Index size);
     Tensor<float, 2> act(const Tensor<float, 2>&);
     Tensor<float, 2> grad_act(const Tensor<float, 2>&);
 };
@@ -106,15 +143,16 @@ public:
 class SoftMaxLayer: public FCLayer
 {
 public:
+    SoftMaxLayer(Index size);
     Tensor<float, 2> act(const Tensor<float, 2>&);
     Tensor<float, 2> grad_act(const Tensor<float, 2>&);
 };
 
-class ConvolLayer:public Layer
+class ConvolLayer:public Layer<3>
 {
 protected:
     Tensor<float, 3> _weights;
-    Tensor<float, 2> _biases;
+    Tensor<float, 1> _biases;
 
     Tensor<float, 2> _winputs; 
 
@@ -124,19 +162,18 @@ protected:
     Tensor<float, 2> _nabla_b;
     Tensor<float, 3> _nabla_w;
 
-    std::array<int, 2> _output_shape;
 public:
-    const size_t _size = 0;
-    const std::array<int, 3> _shape {0, 0, 0};
-    ConvolLayer(std::array<int, 3>);
-    void init(size_t n_samples);
+    ConvolLayer(std::array<Index, 3>);
+    void init(Index n_samples);
     void initParams();
 
     void fwd();
     void bwd();
+    void fwd(const Tensor<float, 4>&);
+    void bwd(const Tensor<float, 4>&);
 
-    Tensor<float, 4> act(const Tensor<float, 2>&);
-    Tensor<float, 4> grad_act(const Tensor<float, 2>&);
+    Tensor<float, 4> act(const Tensor<float, 4>&);
+    Tensor<float, 4> grad_act(const Tensor<float, 4>&);
 
     Tensor<float, 4> get_act();
     Tensor<float, 4> get_grad();
