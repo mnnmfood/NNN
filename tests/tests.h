@@ -9,8 +9,8 @@ void printShape(const Matrix<float, Dynamic, Dynamic>& a){
 }
 
 void testSequentialInit(){
-    Sequential2 model({
-        new InputLayer(784),
+    Sequential2<1, 1> model({
+        new InputLayer(std::array<Index, 1> {784}),
         new SigmoidLayer(30), 
         new SigmoidLayer(10)
         }
@@ -22,8 +22,8 @@ void testSequentialInit(){
 }
 
 void testFeedFwd(){
-    Sequential2 model({
-        new InputLayer(2),
+    Sequential2<1, 1> model({
+        new InputLayer(std::array<Index, 1> {2}),
         new SigmoidLayer(30), 
         new SigmoidLayer(10)
         }
@@ -34,16 +34,14 @@ void testFeedFwd(){
     Eigen::Tensor<float, 1> xi(2);
     xi.setValues({5, 3});
     for(int i{0}; i < 10; i++){x.chip(i, 1) = xi;}
-    std::cout << x << "\n\n";
-    //model.init(x.cols());
     model.init(x.dimension(1));
     model.fwdProp(x);
     std::cout << "Success\n\n";
 }
 
 void testBackProp(){
-    Sequential2 model({
-        new InputLayer(6),
+    Sequential2<1, 1> model({
+        new InputLayer(std::array<Index, 1> {6}),
         new SigmoidLayer(30), 
         new SigmoidLayer(3)
         }

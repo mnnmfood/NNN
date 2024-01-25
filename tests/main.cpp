@@ -21,7 +21,7 @@ int main(){
     std::cout << "--TESTING INIT" << "\n";
     testSequentialInit();
     std::cout << "--TESTING Feed-forward" << "\n";
-    //testFeedFwd();
+    testFeedFwd();
     std::cout << "--TESTING Backwards-propagation" << "\n";
     testBackProp();
 
@@ -44,8 +44,8 @@ int main(){
     std::cout << "Validation Shape y: " << val_y.dimension(0) << ", " << val_y.dimension(1)<< '\n';
 
     // network architecture
-    Sequential2 model({
-        new InputLayer(784),
+    Sequential2<1, 1> model({
+        new InputLayer(std::array<Index, 1> {784}),
         new SigmoidLayer(30), 
         new SigmoidLayer(10)
         }
