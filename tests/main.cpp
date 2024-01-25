@@ -43,6 +43,7 @@ int main(){
     load_csv(dataDir + "val_y.csv", val_y);
     std::cout << "Validation Shape y: " << val_y.dimension(0) << ", " << val_y.dimension(1)<< '\n';
 
+    ConvolLayer c(std::array<Index, 3> {2, 2, 30});
     // network architecture
     Sequential2<1, 1> model({
         new InputLayer(std::array<Index, 1> {784}),
