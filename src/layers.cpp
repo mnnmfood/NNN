@@ -5,8 +5,8 @@
 #include "eigenFuns.h"
 #include "typedefs.h"
 
-inline const array<int, 1> dims_colwise {0};
-inline const array<int, 1> dims_rowwise {1};
+inline const std::array<int, 1> dims_colwise {0};
+inline const std::array<int, 1> dims_rowwise {1};
 
 scalar_comparer_op<float> min_comparer([](float x, float y)->float {return x < y ? x: y;});
 scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y ? x: y;});
@@ -57,16 +57,22 @@ public:
 };
 
  // Generic Layer
-Layer::Layer(size_t size) :_size{size} {}
-Layer* Layer::next(){return _next;}
-Layer* Layer::prev(){return _prev;}
+BaseLayer::Layer(size_t size) :_size{size} {}
+BaseLayer* BaseLayer::next(){return _next;}
+BaseLayer* BaseLayer::prev(){return _prev;}
 
 // Input Layer
 InputLayer::InputLayer(size_t size)
     :Layer {size}
-{
+{}
+
+Tensor<float> InputLayer::get_act(){
+    return _act;
 }
 
+Tensor<float, 2> InputLayer::get_grad(){
+    return _act;
+}
 void InputLayer::init(size_t n_samples){
     _act = Tensor<float, 2>(_size, n_samples);
 }
@@ -75,13 +81,6 @@ void InputLayer::fwd(const Tensor<float, 2>& input){
     _act = input;
 }
 
-Tensor<float, 2> InputLayer::get_act(){
-    return _act;
-}
-
-Tensor<float, 2> InputLayer::get_grad(){
-    return _act;
-}
 
 
 // Fully connected layer

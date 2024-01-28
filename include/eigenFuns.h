@@ -7,40 +7,44 @@
 #include "typedefs.h"
 
 // ---- Sum Matrix and Vector colwise or rowwise
-template<typename T>
+
+template<typename ArgType1, typename ArgType2>
 struct VecsumOp
 {
-  VecsumOp(Tensor<T, 2>& mat, Tensor<T, 1>& vec, bool rowwise=true)
+ typedef typename ArgType1::Scalar _Scalar;
+  VecsumOp(ArgType1& mat, ArgType2& vec, bool rowwise=true)
     :m_mat{mat}, m_vec{vec}, m_rows{mat.dimension(0)}, m_cols{mat.dimension(1)}, 
     m_rowwise{rowwise}
   {
+    static_assert((ArgType1::NumDimensions == 2) && (ArgType2::NumDimensions == 1));
     if(rowwise){
       assert(m_mat.dimension(1)==m_vec.dimension(0));
     }else{
       assert(m_mat.dimension(0)==m_vec.dimension(0));
     }
   } 
-  const T operator()(Eigen::Index idx) const{
+  const _Scalar operator()(Eigen::Index idx) const{
     Eigen::Index row = idx % m_rows; 
     Eigen::Index col = idx / m_rows;
     return m_mat(row, col) + (m_rowwise?m_vec(col):m_vec(row));
   }
 private:
-  Tensor<T, 2> m_mat;
-  Tensor<T, 1> m_vec;
+  ArgType1 m_mat;
+  ArgType2 m_vec;
   Eigen::Index m_rows;
   Eigen::Index m_cols;
   bool m_rowwise;
 };
 
-// R-value version
-template<typename T>
-auto vecSum(Tensor<T, 2>&& mat, Tensor<T, 1>& vec, bool rowwise=true){
-    return mat.nullaryExpr(VecsumOp(mat, vec, rowwise));
-}
 // L-value version
-template<typename T>
-auto vecSum(Tensor<T, 2>& mat, Tensor<T, 1>& vec, bool rowwise=true){
+template<typename ArgType1, typename ArgType2>
+auto vecSum(ArgType1& mat, ArgType2& vec, bool rowwise=true){
+    return mat.nullaryExpr(VecsumOp<ArgType1, ArgType2>(mat, vec, rowwise));
+}
+
+// R-value version
+template<typename ArgType1, typename ArgType2>
+auto vecSum(ArgType1&& mat, ArgType2&& vec, bool rowwise=true){
     return mat.nullaryExpr(VecsumOp(mat, vec, rowwise));
 }
 // ---
@@ -126,23 +130,29 @@ private:
     bool is_first;
 };
 
-// --- Reducer: cacluate min/max value rowwise or colwwise
-template<typename T>
-T min(const Tensor<T, 2>& t)
+// --- Reducer: cacluate min/max value
+template<typename ArgType>
+ArgType::Scalar min(const ArgType& t)
 {
-    array<Eigen::Index, 2> dims({0, 1});
+    //array<Eigen::Index, 2> dims({0, 1});
+    std::array<Index, ArgType::NumDimensions> dims;
+    for(size_t i{0}; i < ArgType::NumDimensions; i++){
+      dims[i] = static_cast<Index>(i);
+    }
     scalar_comparer_op<T> comparer([](T x, T y)->T {return x < y ? x: y;});
-    Tensor<T, 0> temp = t.reduce(dims, comparer);
+    Eigen::Tensor<T, 0> temp = t.reduce(dims, comparer);
     return temp(0);
 }
 
-template<typename T>
-T max(const Tensor<T, 2>& t)
+template<typename ArgType>
+ArgType::Scalar max(const ArgType& t)
 {
-    array<Eigen::Index, 2> dims({0, 1});
-    scalar_comparer_op<T> comparer( [](T x, T y)->T {return x > y ? x: y;});
-    Tensor<T, 0> temp = t.reduce(dims, comparer);
-    std::cout << "temp " << temp << " " << temp(0) << "\n";
+    std::array<Index, ArgType::NumDimensions> dims;
+    for(size_t i{0}; i < ArgType::NumDimensions; i++){
+      dims[i] = static_cast<Index>(i);
+    }
+    scalar_comparer_op<T> comparer([](T x, T y)->T {return x > y ? x: y;});
+    Eigen::Tensor<T, 0> temp = t.reduce(dims, comparer);
     return temp(0);
 }
 // ---
@@ -160,46 +170,53 @@ transposed(const ArgType& t){
 }
 
 // --- Unary-Op: normalize tensor to range 0-1
+template<typename ArgType>
 struct max_normalize_op
 {
-    max_normalize_op(Tensor<float, 2> t)
-        :m_max{max<float>(t)}, m_min{min<float>(t)}
+    max_normalize_op(ArgType t)
+        :m_max{max<ArgType>(t)}, m_min{min<ArgType>(t)}
     {
     }
-    float operator()(float a) const{
+    float operator()(ArgType::Scalar a) const{
         return (a- m_min) / (m_max-m_min);
     }
 private:
-    float m_max;
-    float m_min;
+    ArgType::Scalar m_max;
+    ArgType::Scalar m_min;
 };
 
 // -- Slice tensor along given dimension:
-template<int N>
-Tensor<float, N> sliced(const Tensor<float, N>& arg, const std::vector<int>& indices, int dim){
-  Eigen::array<Eigen::Index, N> out_size;
+template<typename ArgType>
+ArgType sliced(const ArgType& arg, const std::vector<int>& indices, int dim)
+{
+  assert(indices.size() < arg.dimension(dim));
+  assert(*std::max_element(indices.begin(), indices.end()) < arg.dimension(dim));
+  std::array<Eigen::Index, ArgType::NumDimensions> out_size;
   for(int i{0}; i < N; i++){
     out_size[i] = arg.dimension(i);
   }
   out_size[dim] = indices.size();
 
-  Tensor<float, N> out_slice(out_size);
+  ArgType out_slice(out_size);
   for(size_t i{0}; i < indices.size(); i++){
     out_slice.chip(i, dim) = arg.chip(indices[i], dim);
   }
   return out_slice;
 }
 
-template<int N>
-Tensor<float, N> sliced(const Tensor<float, N>&& arg, const std::vector<int>& indices, int dim){
-  Eigen::array<Eigen::Index, N> out_size;
+template<typename ArgType>
+ArgType sliced(const ArgType&& arg, const std::vector<int>& indices, int dim)
+{
+  assert(indices.size() < arg.dimension(dim));
+  assert(*std::max_element(indices.begin(), indices.end()) < arg.dimension(dim));
+  std::array<Eigen::Index, ArgType::NumDimensions> out_size;
   for(int i{0}; i < N; i++){
     out_size[i] = arg.dimension(i);
   }
   out_size[dim] = indices.size();
 
-  Tensor<float, N> out_slice(out_size);
-  for(int i{0}; i < indices.size(); i++){
+  ArgType out_slice(out_size);
+  for(size_t i{0}; i < indices.size(); i++){
     out_slice.chip(i, dim) = arg.chip(indices[i], dim);
   }
   return out_slice;

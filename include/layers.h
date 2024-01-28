@@ -4,39 +4,64 @@
 #include<Eigen/Dense>
 #include<random>
 #include "typedefs.h"
+#include <Tensor.h>
 
 inline std::random_device rd{};
 inline std::mt19937 gen{rd()};
 
-class Layer
+class BaseLayer
 {
+
 public:
-    Layer(size_t);
-    Layer* _next = nullptr;
-    Layer* _prev = nullptr;
+    size_t _size;
+    BaseLayer* _next = nullptr;
+    BaseLayer* _prev = nullptr;
+
+    BaseLayer* next();
+    BaseLayer* prev();
+    BaseLayer(size_t);
 
     virtual void fwd() = 0;
-    virtual void fwd(const Tensor<float, 2>&) = 0;
+    virtual void fwd(const Tensor<float>&) = 0;
     virtual void bwd() = 0;
-    virtual void bwd(const Tensor<float, 2>&) = 0;
+    virtual void bwd(const Tensor<float>&) = 0;
 
     virtual void init(size_t){}
     virtual void initParams() = 0;
 
-    virtual Tensor<float, 2> get_act() = 0;
-    virtual Tensor<float, 2> get_grad() = 0;
+    virtual Tensor<float> get_act() = 0;
+    virtual Tensor<float> get_grad() = 0;
 
-    Layer* next();
-    Layer* prev();
 
-    virtual ~Layer() = default;
+    virtual ~BaseLayer() = default;
 
-    virtual void update(float rate, float mu, float size){}; 
+    virtual void update(float rate, float mu, float size) = 0; 
+};
+
+template<class Derived>
+class Layer
+{
+    typedef typename traits<Derived>::out_shape_t out_shape_t;
+    typedef typename traits<Derived>::in_shape_t in_shape_t;
+
+    Tensor<float> _act;
+    Tensor<float> _grad;
+public:
+    Tensor<float>& get_act(){
+        return _act;
+    }
+    Tensor<float>& get_grad(){
+        return _grad;k
+    }
+    void init(size_t batch_size){
+
+    }
 };
 
 class InputLayer: public Layer
 {
-    Tensor<float, 2> _act;
+    Tensor<float> _act;
+    Tensor<float> _grad;
 public:
     const size_t _size = 0;
     InputLayer(size_t);
@@ -44,12 +69,12 @@ public:
     void initParams(){}
 
     void fwd(){}
-    void fwd(const Tensor<float, 2>&);
+    void fwd(const Tensor<float>&);
     void bwd(){};
-    void bwd(const Tensor<float, 2>&){};
+    void bwd(const Tensor<float>&){};
 
-    virtual Tensor<float, 2> get_act();
-    virtual Tensor<float, 2> get_grad();
+    virtual Tensor<float> get_act();
+    virtual Tensor<float> get_grad();
 };
 
 class FCLayer: public Layer
