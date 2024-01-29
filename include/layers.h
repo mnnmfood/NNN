@@ -11,15 +11,15 @@ inline std::mt19937 gen{rd()};
 
 class BaseLayer
 {
-
 public:
-    size_t _size;
+    size_t _out_num_dims;
+    size_t _in_num_dims;
     BaseLayer* _next = nullptr;
     BaseLayer* _prev = nullptr;
 
     BaseLayer* next();
     BaseLayer* prev();
-    BaseLayer(size_t);
+    BaseLayer(size_t, size_t);
 
     virtual void fwd() = 0;
     virtual void fwd(const Tensor<float>&) = 0;
@@ -31,7 +31,7 @@ public:
 
     virtual Tensor<float> get_act() = 0;
     virtual Tensor<float> get_grad() = 0;
-
+    virtual TensorShape shape() = 0; 
 
     virtual ~BaseLayer() = default;
 
@@ -43,22 +43,26 @@ class Layer
 {
     typedef typename traits<Derived>::out_shape_t out_shape_t;
     typedef typename traits<Derived>::in_shape_t in_shape_t;
-
+    const size_t out_dims = std::tuple_size<out_shape_t>{};
+    const size_t in_dims = std::tuple_size<in_shape_t>{};
+    bool _trainable = traits<Derived>::trainable;
     Tensor<float> _act;
     Tensor<float> _grad;
 public:
+    Layer() :Layer {out_dims, in_dims} {}
     Tensor<float>& get_act(){
         return _act;
     }
     Tensor<float>& get_grad(){
-        return _grad;k
+        return _grad;
     }
     void init(size_t batch_size){
-
+        in_shape_t in_shape {prev().outShape().get<in_shape_t>()};
+        out_shape_t out_shape {next().inShape().get<in_shape_t>()};
     }
 };
 
-class InputLayer: public Layer
+class InputLayer: public Layer<InputLayer>
 {
     Tensor<float> _act;
     Tensor<float> _grad;
@@ -77,7 +81,7 @@ public:
     virtual Tensor<float> get_grad();
 };
 
-class FCLayer: public Layer
+class FCLayer: public Layer<FCLayer>
 {
 protected:
     Tensor<float, 2> _weights;
@@ -135,6 +139,7 @@ public:
     Tensor<float, 2> grad_act(const Tensor<float, 2>&);
 };
 
+#if 0
 class ConvolLayer:public Layer
 {
 protected:
@@ -170,5 +175,6 @@ public:
 
     void update(float, float, float);
 };
+#endif
 
 #endif

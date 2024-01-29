@@ -84,4 +84,47 @@ std::ostream& operator<<(std::ostream& out, const Tensor<T>& tensor){
     return out;
 }
 
+class TensorShape
+{
+    Index* data;
+    size_t _size;
+public:
+    TensorShape() = default;
+    TensorShape(size_t size) :_size{size}{
+        data = new Index[_size];
+    }
+    template<size_t N>
+    TensorShape(std::array<Index, N> arr) :_size{arr.size()}{
+        data = new Index[_size];
+        std::copy(arr.begin(), arr.end(), data);
+    }
+
+    TensorShape& operator=(const TensorShape& s){
+        _size = s._size;
+        if(data)
+            delete[] data;
+        data = new Index[_size];
+        std::copy(s.data, s.data + _size, data);
+        return *this;
+    }
+
+    TensorShape& operator=(const TensorShape&& s){
+        _size = s._size;
+        if(data)
+            delete[] data;
+        data = new Index[_size];
+        std::copy(s.data, s.data + _size, data);
+        return *this;
+    }
+
+    template<typename shape_t>
+    shape_t get(){
+        assert(std::tuple_size<shape_t>{} == _size);
+        shape_t temp;
+        std::copy(data, data+_size, temp.data());
+        return temp;
+    }
+};
+
+
 #endif

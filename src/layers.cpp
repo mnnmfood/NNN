@@ -57,7 +57,8 @@ public:
 };
 
  // Generic Layer
-BaseLayer::Layer(size_t size) :_size{size} {}
+BaseLayer::BaseLayer(size_t out_dims, size_t in_dims) 
+:_out_num_dims{out_dims}, _in_num_dims {in_dims} {}
 BaseLayer* BaseLayer::next(){return _next;}
 BaseLayer* BaseLayer::prev(){return _prev;}
 
@@ -195,6 +196,7 @@ Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
 
 // Convolutional layer
 
+#if 0
 ConvolLayer::ConvolLayer(std::array<int, 3> shape)
     :Layer{shape[0]*shape[1]*shape[2]}, _shape{shape}
 {
@@ -225,3 +227,4 @@ void ConvolLayer::fwd(){
     assert(_prev != nullptr);
     _winputs = _prev->get_act().reshape()
 }
+#endif
