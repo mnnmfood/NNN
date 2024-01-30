@@ -144,7 +144,7 @@ ArgType::Scalar min(const ArgType& t)
     return temp(0);
 }
 
-template<typename ArgType>
+template<typename ArgType, ArgType::Scalar>
 ArgType::Scalar max(const ArgType& t)
 {
     std::array<Index, ArgType::NumDimensions> dims;

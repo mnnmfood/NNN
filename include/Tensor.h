@@ -3,14 +3,13 @@
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <iostream>
-
-using Eigen::Index;
+#include "typedefs.h"
 
 template<typename T, int NumDimensions>
 using TensorView = Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>>;
 
 template<typename T>
-class Tensor
+class TensorWrapper
 {
     template<size_t NumDimensions>
     bool checkSize(std::array<Index, NumDimensions>& size){
@@ -24,104 +23,35 @@ public:
     T* data = nullptr;
     size_t _size;
 
-    Tensor(){}
-
-    Tensor(size_t size)
-        :_size{size}
-    {
-        data = new T[_size];
-    }
-
-    Tensor(const Tensor<T>& t){
-        _size = t._size;
-        data = new T[_size];
-        memcpy(data, t.data, sizeof(T)*_size);
-    }
-
-    Tensor<T>& operator=(const Tensor<T>& t){
-        _size = t._size;
-        if(data)
-            delete[] data;
-        data = new T[_size];
-        memcpy(data, t.data, sizeof(T)*_size);
-        return *this;
-    }
-
-    Tensor<T>& operator=(const Tensor<T>&& t){
-        _size = t._size;
-        if(data)
-            delete[] data;
-        data = new T[_size];
-        memcpy(data, t.data, sizeof(T)*_size);
-        return *this;
-    }
+    template<size_t NumDimensions>
+    TensorWrapper(Tensor<T, NumDimensions>& t)
+        :data{t.data()}, _size{t.size()}{}
     // Return as Eigen 
     template<size_t NumDimensions>
-    Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>> tensor(std::array<Index, NumDimensions>& size){
+    Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>> get(std::array<Index, NumDimensions>& size){
         assert(checkSize(size));
-        return Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>>(data.get(), size);
+        return Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>>(data, size);
     }
-
-    Eigen::TensorMap<Eigen::Tensor<T, 1>> tensor(){
+    Eigen::TensorMap<Eigen::Tensor<T, 1>> get(){
         return Eigen::TensorMap<Eigen::Tensor<T, 1>>(data, _size);
     }
-
-    template<typename Ts>
-    friend std::ostream& operator<<(std::ostream& out, const Tensor<Ts>& tensor);
-
-    ~Tensor(){
-        if(data)
-            delete[] data;
-    }
 };
-
-template<typename T>
-std::ostream& operator<<(std::ostream& out, const Tensor<T>& tensor){
-    for(size_t i{0}; i < tensor._size; i++){
-        out << tensor.data[i] << ", ";
-    }
-    out << "\n\n";
-    return out;
-}
 
 class TensorShape
 {
     Index* data;
     size_t _size;
 public:
-    TensorShape() = default;
-    TensorShape(size_t size) :_size{size}{
+    template<size_t NumDimensions>
+    TensorShape(std::array<Index, NumDimensions>& shape) :_size{NumDimensions}{
         data = new Index[_size];
+        std::copy(shape.begin(), shape.end(), data);
     }
-    template<size_t N>
-    TensorShape(std::array<Index, N> arr) :_size{arr.size()}{
-        data = new Index[_size];
-        std::copy(arr.begin(), arr.end(), data);
-    }
-
-    TensorShape& operator=(const TensorShape& s){
-        _size = s._size;
-        if(data)
-            delete[] data;
-        data = new Index[_size];
-        std::copy(s.data, s.data + _size, data);
-        return *this;
-    }
-
-    TensorShape& operator=(const TensorShape&& s){
-        _size = s._size;
-        if(data)
-            delete[] data;
-        data = new Index[_size];
-        std::copy(s.data, s.data + _size, data);
-        return *this;
-    }
-
     template<typename shape_t>
     shape_t get(){
         assert(std::tuple_size<shape_t>{} == _size);
         shape_t temp;
-        std::copy(data, data+_size, temp.data());
+        std::copy(data, data + _size, temp.data());
         return temp;
     }
 };

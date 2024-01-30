@@ -6,6 +6,9 @@
 #include "typedefs.h"
 #include <Tensor.h>
 
+inline const std::array<int, 1> dims_colwise {0};
+inline const std::array<int, 1> dims_rowwise {1};
+
 inline std::random_device rd{};
 inline std::mt19937 gen{rd()};
 
@@ -22,16 +25,17 @@ public:
     BaseLayer(size_t, size_t);
 
     virtual void fwd() = 0;
-    virtual void fwd(const Tensor<float>&) = 0;
+    virtual void fwd(const TensorWrapper<float>&) = 0;
     virtual void bwd() = 0;
-    virtual void bwd(const Tensor<float>&) = 0;
+    virtual void bwd(const TensorWrapper<float>&) = 0;
 
     virtual void init(size_t){}
     virtual void initParams() = 0;
 
-    virtual Tensor<float> get_act() = 0;
-    virtual Tensor<float> get_grad() = 0;
-    virtual TensorShape shape() = 0; 
+    virtual TensorWrapper<float> get_act() = 0;
+    virtual TensorWrapper<float> get_grad() = 0;
+    virtual TensorShape in_shape() = 0; 
+    virtual TensorShape out_shape() = 0; 
 
     virtual ~BaseLayer() = default;
 
@@ -39,66 +43,90 @@ public:
 };
 
 template<class Derived>
-class Layer
+class Layer: public BaseLayer
 {
+protected:
     typedef typename traits<Derived>::out_shape_t out_shape_t;
     typedef typename traits<Derived>::in_shape_t in_shape_t;
-    const size_t out_dims = std::tuple_size<out_shape_t>{};
-    const size_t in_dims = std::tuple_size<in_shape_t>{};
+    const size_t out_dims {std::tuple_size<out_shape_t>{}};
+    const size_t in_dims {std::tuple_size<in_shape_t>{}};
+    const size_t num_dims {traits<Derived>::NumDimensions};
+    using out_t = Tensor<float, std::tuple_size<out_shape_t>{}+1>
+    using in_t = Tensor<float, std::tuple_size<in_shape_t>{}+1>
+    using weight_t = std::conditional<traits<Derived>::trainable, 
+     Tensor<float, traits<Derived>::NumDimensions>, dummyTensor>::type;
+    using bias_t = std::conditional<traits<Derived>::trainable, 
+     Tensor<float, 1>, dummyTensor>::type;
+    using nabla_weight_t = std::conditional<traits<Derived>::trainable, 
+     Tensor<float, traits<Derived>::NumDimensions+1>, dummyTensor>::type;
+    using nabla_b_t = std::conditional<traits<Derived>::trainable, 
+     Tensor<float, 2>, dummyTensor>::type;
+
     bool _trainable = traits<Derived>::trainable;
-    Tensor<float> _act;
-    Tensor<float> _grad;
+    out_t _act;
+    in_t _grad;
+    in_t _winputs;
+    weight_t _weights;
+    bias_t _biases;
+    nabla_weight_t _nabla_w;
+    nabla_b_t _nabla_b;
+    out_shape_t _out_shape;
+    in_shape_t _in_shape;
+
 public:
-    Layer() :Layer {out_dims, in_dims} {}
-    Tensor<float>& get_act(){
-        return _act;
+    Layer() :BaseLayer {out_dims, in_dims} {}
+    TensorWrapper<float>& get_act(){
+        return TensorWrapepr(_act);
     }
-    Tensor<float>& get_grad(){
-        return _grad;
+    TensorWrapper<float>& get_grad(){
+        return TensorWrapper(_grad);
     }
-    void init(size_t batch_size){
-        in_shape_t in_shape {prev().outShape().get<in_shape_t>()};
-        out_shape_t out_shape {next().inShape().get<in_shape_t>()};
+    // TODO: updating method should be specific to optimization strategy,
+    // this should not be here
+    void update(float rate, float mu, float size){
+        if(_trainable){
+        _weights = (1 - rate * mu / size) * _weights.eval()- (rate / size) * _nabla_w;
+        _biases -= (rate / size) * (_nabla_b.sum(dims_rowwise));
+        }
+    }
+    TensorShape in_shape(){
+        return TensorShape(_in_shape);
+    }
+    TensorShape out_shape(){
+        return TensorShape(_out_shape);
     }
 };
 
-class InputLayer: public Layer<InputLayer>
+template<typename N>
+class InputLayer: public Layer<InputLayer<N>>
 {
-    Tensor<float> _act;
-    Tensor<float> _grad;
+    std::array<Index, N> _shape;
+    std::array<Index, N+1> batch_shape;
 public:
     const size_t _size = 0;
-    InputLayer(size_t);
-    void init(size_t n_samples);
+    InputLayer(std::array<Index, N> shape) :_shape{shape}{
+        std::copy(_shape.begin(), _shape.end(), batch_shape);
+    }
+    void init(size_t n_samples){
+        batch_shape.back() = n_samples;
+        _act = Tensor<float, N>(batch_shape);
+    }
     void initParams(){}
-
     void fwd(){}
-    void fwd(const Tensor<float>&);
+    void fwd(const TensorWrapper<float>& input){
+        _act = input.get(batch_size);
+    }
     void bwd(){};
-    void bwd(const Tensor<float>&){};
-
-    virtual Tensor<float> get_act();
-    virtual Tensor<float> get_grad();
+    void bwd(const TensorWrapper<float>&){};
 };
 
 class FCLayer: public Layer<FCLayer>
 {
-protected:
-    Tensor<float, 2> _weights;
-    Tensor<float, 1> _biases;
-
-    Tensor<float, 2> _winputs; 
-
-    Tensor<float, 2> _act;
-    Tensor<float, 2> _grad;
-
-    Tensor<float, 2> _nabla_b;
-    Tensor<float, 2> _nabla_w;
-
+    std::array<Index, 1> _shape;
+    std::array<Index, 2> batch_shape;
 public:
-    const size_t _size = 0;
-    FCLayer(size_t size);
-    void init(size_t n_samples);
+    FCLayer(Index size);
+    void init(Index n_samples);
     void initParams();
 
     void fwd();
@@ -109,12 +137,7 @@ public:
     virtual Tensor<float, 2> act(const Tensor<float, 2>&) = 0;
     virtual Tensor<float, 2> grad_act(const Tensor<float, 2>&) = 0;
 
-    Tensor<float, 2> get_act();
-    Tensor<float, 2> get_grad();
-
     virtual ~FCLayer() = default;
-
-    void update(float, float, float);
 };
 
 class SigmoidLayer: public FCLayer

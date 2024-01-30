@@ -5,9 +5,6 @@
 #include "eigenFuns.h"
 #include "typedefs.h"
 
-inline const std::array<int, 1> dims_colwise {0};
-inline const std::array<int, 1> dims_rowwise {1};
-
 scalar_comparer_op<float> min_comparer([](float x, float y)->float {return x < y ? x: y;});
 scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y ? x: y;});
 
@@ -62,59 +59,35 @@ BaseLayer::BaseLayer(size_t out_dims, size_t in_dims)
 BaseLayer* BaseLayer::next(){return _next;}
 BaseLayer* BaseLayer::prev(){return _prev;}
 
-// Input Layer
-InputLayer::InputLayer(size_t size)
-    :Layer {size}
-{}
-
-Tensor<float> InputLayer::get_act(){
-    return _act;
-}
-
-Tensor<float, 2> InputLayer::get_grad(){
-    return _act;
-}
-void InputLayer::init(size_t n_samples){
-    _act = Tensor<float, 2>(_size, n_samples);
-}
-
-void InputLayer::fwd(const Tensor<float, 2>& input){
-    _act = input;
-}
-
-
-
 // Fully connected layer
-FCLayer::FCLayer(size_t size)
-   :Layer {size}
-{
+FCLayer::FCLayer(Index size) :_shape{size}{
+    std::copy(_shape.begin(), _shape.end(), batch_shape.begin());
 }
 
 void FCLayer::initParams(){
-    size_t prev_size = _prev->_size;
+    in_shape_t prev_size = _prev->out_shape().get<in_shape_t>();
     NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
         static_cast<float>(prev_size)
     ));
 
-    _weights = Tensor<float, 2>(_size, prev_size).unaryExpr(std::ref(sampleFun));
-    _biases = Tensor<float, 1>(_size).unaryExpr(std::ref(sampleFun));
+    _weights = weight_t(_size, prev_size).unaryExpr(std::ref(sampleFun));
+    _biases = bias_t(_size).unaryExpr(std::ref(sampleFun));
 }
 
-void FCLayer::init(size_t n_samples){
-    _act = Tensor<float, 2>(_size, n_samples); 
-    _grad = Tensor<float, 2>(_size, n_samples); 
-    _winputs = Tensor<float, 2>(_size, n_samples);
-    _nabla_b = Tensor<float, 2>(_size, n_samples); 
-    _nabla_w = Tensor<float, 2>(_size, n_samples); 
+void FCLayer::init(Index bath_size){
+    batch_shape.back() = batch_size;
+    _act = out_t(batch_shape); 
+    _grad = in_t(batch_shape); 
+    _winputs = in_t(batch_shape);
+    _nabla_b = nabla_b_t(batch_shape); 
+    _nabla_w = nabla_weight_t(batch_shape); 
 }
-
-Tensor<float, 2> FCLayer::get_act(){return _act;}
-Tensor<float, 2> FCLayer::get_grad(){return _grad;}
 
 void FCLayer::fwd(){
     assert(_prev != nullptr);
-    _winputs = vecSum<float>(_weights.contract(_prev->get_act(), product_dims)
-                            , _biases, false);
+    _winputs = 
+    vecSum<float>(_weights.contract(_prev->get_act().get(_in_shape), 
+        product_dims), _biases, false);
     _act = act(_winputs);
 }
 
@@ -127,18 +100,12 @@ void FCLayer::bwd(const Tensor<float, 2>& cost_grad){
 
 void FCLayer::bwd(){
     assert(_next != nullptr);
-    _nabla_b = _next->get_grad() * grad_act(_winputs);
+    _nabla_b = _next->get_grad().get(_out_shape) * grad_act(_winputs);
     _nabla_w = _nabla_b.contract(transposed(_prev->get_act()), product_dims);
 
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
-// TODO: updating method should be specific to optimization strategy,
-// this should not be here
-void FCLayer::update(float rate, float mu, float size){
-    _weights = (1 - rate * mu / size) * _weights.eval()- (rate / size) * _nabla_w;
-    _biases -= (rate / size) * (_nabla_b.sum(dims_rowwise));
-}
 
 // Sigmoid layer
 SigmoidLayer::SigmoidLayer(size_t size) :FCLayer{size}{}
