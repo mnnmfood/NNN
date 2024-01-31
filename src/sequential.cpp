@@ -1,17 +1,15 @@
 #include <chrono>
-#include "layers.h"
 #include "sequential.h"
-#include "eigenFuns.h"
 
 
 // Sequential model
-Sequential2::Sequential2(std::initializer_list<Layer*> layers, CostFun* cost)
+Sequential2::Sequential2(std::initializer_list<BaseLayer*> layers, CostFun* cost)
     :_layers{layers}, _cost{cost}, num_layers{layers.size()}
 {
 
     // connect forward
     _layers[0]->_prev = nullptr;
-    Layer* prev_layer = _layers[0];
+    BaseLayer* prev_layer = _layers[0];
 
     for(size_t i{1}; i < num_layers; i++){
         _layers[i]->_prev = prev_layer;
@@ -20,7 +18,7 @@ Sequential2::Sequential2(std::initializer_list<Layer*> layers, CostFun* cost)
         prev_layer = _layers[i];
     }
     // connect backwards
-    Layer* next_layer = nullptr;
+    BaseLayer* next_layer = nullptr;
     for(size_t i{num_layers}; i > 0; i--){
         _layers[i-1]->_next = next_layer;
         next_layer = _layers[i-1];
@@ -40,27 +38,29 @@ void Sequential2::init(size_t num_samples){
     }
 }
 
-void Sequential2::fwdProp(const Tensor<float, 2>& input){
-    Layer* layer = _layers.front();
-    layer->fwd(input);
+void Sequential2::fwdProp(Tensor<float, 2>& input){
+    BaseLayer* layer = _layers.front();
+    layer->fwd(TensorWrapper(input));
     layer = layer->next();
     while(layer){
         layer->fwd();
         layer = layer->next();
     }
 }
+void Sequential2::fwdProp(Tensor<float, 2>&& input){fwdProp(input);}
 
-void Sequential2::bkwProp(const Tensor<float, 2>& output){
-    Layer* layer = _layers.back();
-    layer->bwd(
-        _cost->grad(layer->get_act(), output)
-        );
+void Sequential2::bkwProp(Tensor<float, 2>& output){
+    BaseLayer* layer = _layers.back();
+    layer->bwd(TensorWrapper(
+        _cost->grad((layer->get_act()).get(output.dimensions()), output)
+    ));
     layer = layer->prev();
     while(layer){
         layer->bwd();
         layer = layer->prev();
     }
 }
+void Sequential2::bkwProp(Tensor<float, 2>&& output){bkwProp(output);}
 
 void Sequential2::SGD(Tensor<float, 2>& x,
                     Tensor<float, 2>& y, 
@@ -102,12 +102,13 @@ void Sequential2::SGD(Tensor<float, 2>& x,
     }
 }
 
-float Sequential2::accuracy(const Tensor<float, 2>& x, const Tensor<float, 2>& y)
+float Sequential2::accuracy(Tensor<float, 2>& x, Tensor<float, 2>& y)
 {
     Eigen::Index test_size{x.dimension(1)};
 
     fwdProp(x);
-    Tensor<float, 2> pred = _layers.back()->get_act();
+    Tensor<float, 1> pred = _layers.back()
+        ->get_act().get();
 
     Tensor<Eigen::Index, 0> y_pred;
     int sum{0};

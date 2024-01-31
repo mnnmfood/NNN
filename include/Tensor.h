@@ -1,5 +1,5 @@
-#ifndef TENSOR_H
-#define TENSOR_H
+#ifndef TENSORWRAP_H
+#define TENSORWRAP_H
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <iostream>
@@ -12,7 +12,7 @@ template<typename T>
 class TensorWrapper
 {
     template<size_t NumDimensions>
-    bool checkSize(std::array<Index, NumDimensions>& size){
+    bool checkSize(const std::array<Index, NumDimensions>& size){
         size_t total_size = 1;
         for(size_t n{0}; n < NumDimensions; n++){
             total_size *= size[n];
@@ -23,15 +23,25 @@ public:
     T* data = nullptr;
     size_t _size;
 
-    template<size_t NumDimensions>
+    template<int NumDimensions>
     TensorWrapper(Tensor<T, NumDimensions>& t)
-        :data{t.data()}, _size{t.size()}{}
+        :data{t.data()}, _size{static_cast<size_t>(t.size())}{}
+    template<int NumDimensions>
+    TensorWrapper(Tensor<T, NumDimensions>&& t)
+        :data{t.data()}, _size{static_cast<size_t>(t.size())}{}
+    
     // Return as Eigen 
+    template<size_t NumDimensions>
+    Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>> get(const std::array<Index, NumDimensions>& size){
+        assert(checkSize(size));
+        return Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>>(data, size);
+    }
     template<size_t NumDimensions>
     Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>> get(std::array<Index, NumDimensions>& size){
         assert(checkSize(size));
         return Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>>(data, size);
     }
+
     Eigen::TensorMap<Eigen::Tensor<T, 1>> get(){
         return Eigen::TensorMap<Eigen::Tensor<T, 1>>(data, _size);
     }

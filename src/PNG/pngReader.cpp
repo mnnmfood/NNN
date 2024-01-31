@@ -30,7 +30,8 @@ void PNGReader::read(int dst_type, Tensor<byte, 2>& data)
     // return tranpsosed tensor
     data = Tensor<byte, 2>(nbytes, m_info.height);
     read_arr(data.data(), m_info.height, nbytes, dst_type);
-    data = transposed(data);
+    Tensor<byte, 2> temp = transposed(data);
+    data = temp;
 }
 
 void PNGReader::read_arr(byte* buffer, size_t rows, size_t cols, int dst_type)

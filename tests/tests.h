@@ -9,7 +9,7 @@ void printShape(const Matrix<float, Dynamic, Dynamic>& a){
 }
 
 void testSequentialInit(){
-    Sequential2<1, 1> model({
+    Sequential2 model({
         new InputLayer(std::array<Index, 1> {784}),
         new SigmoidLayer(30), 
         new SigmoidLayer(10)
@@ -22,7 +22,7 @@ void testSequentialInit(){
 }
 
 void testFeedFwd(){
-    Sequential2<1, 1> model({
+    Sequential2 model({
         new InputLayer(std::array<Index, 1> {2}),
         new SigmoidLayer(30), 
         new SigmoidLayer(10)
@@ -40,7 +40,7 @@ void testFeedFwd(){
 }
 
 void testBackProp(){
-    Sequential2<1, 1> model({
+    Sequential2 model({
         new InputLayer(std::array<Index, 1> {6}),
         new SigmoidLayer(30), 
         new SigmoidLayer(3)

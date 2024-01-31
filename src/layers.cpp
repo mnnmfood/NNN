@@ -2,8 +2,6 @@
 #include "layers.h"
 #include <Eigen/Dense>
 #include <iostream>
-#include "eigenFuns.h"
-#include "typedefs.h"
 
 scalar_comparer_op<float> min_comparer([](float x, float y)->float {return x < y ? x: y;});
 scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y ? x: y;});
@@ -60,21 +58,23 @@ BaseLayer* BaseLayer::next(){return _next;}
 BaseLayer* BaseLayer::prev(){return _prev;}
 
 // Fully connected layer
-FCLayer::FCLayer(Index size) :_shape{size}{
+FCLayer::FCLayer(Index size) 
+    :Layer{std::array<Index, 1>{size}, std::array<Index, 1>{size}},
+     _shape{size}{ 
     std::copy(_shape.begin(), _shape.end(), batch_shape.begin());
 }
 
 void FCLayer::initParams(){
     in_shape_t prev_size = _prev->out_shape().get<in_shape_t>();
     NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
-        static_cast<float>(prev_size)
+        static_cast<float>(_shape[0])
     ));
-
-    _weights = weight_t(_size, prev_size).unaryExpr(std::ref(sampleFun));
-    _biases = bias_t(_size).unaryExpr(std::ref(sampleFun));
+    std::array<Index, 2> temp {_shape[0], prev_size[0]};
+    _weights = weight_t(temp).unaryExpr(std::ref(sampleFun));
+    _biases = bias_t(_shape[0]).unaryExpr(std::ref(sampleFun));
 }
 
-void FCLayer::init(Index bath_size){
+void FCLayer::init(Index batch_size){
     batch_shape.back() = batch_size;
     _act = out_t(batch_shape); 
     _grad = in_t(batch_shape); 
@@ -85,30 +85,32 @@ void FCLayer::init(Index bath_size){
 
 void FCLayer::fwd(){
     assert(_prev != nullptr);
-    _winputs = 
-    vecSum<float>(_weights.contract(_prev->get_act().get(_in_shape), 
+    std::cout << _in_shape[0] << ", " << _in_shape[1];
+    _winputs = vecSum(_weights.contract(_prev->get_act().get(_in_shape), 
         product_dims), _biases, false);
     _act = act(_winputs);
 }
 
-void FCLayer::bwd(const Tensor<float, 2>& cost_grad){
+void FCLayer::fwd(TensorWrapper<float>&&){}
+void FCLayer::bwd(TensorWrapper<float>&& cost_grad){
     assert(_next == nullptr);
-    _nabla_b = cost_grad * grad_act(_winputs);
-    _nabla_w = _nabla_b.contract(transposed(_prev->get_act()), product_dims);
+    _nabla_b = cost_grad.get(_out_shape) * grad_act(_winputs);
+    _nabla_w = _nabla_b.contract(transposed(_prev->get_act().get(_in_shape)), product_dims);
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
 void FCLayer::bwd(){
     assert(_next != nullptr);
     _nabla_b = _next->get_grad().get(_out_shape) * grad_act(_winputs);
-    _nabla_w = _nabla_b.contract(transposed(_prev->get_act()), product_dims);
+    _nabla_w = _nabla_b.contract(
+        transposed(_prev->get_act().get(_in_shape)), product_dims);
 
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
 
 // Sigmoid layer
-SigmoidLayer::SigmoidLayer(size_t size) :FCLayer{size}{}
+SigmoidLayer::SigmoidLayer(Index size) :FCLayer{size}{}
 
 Tensor<float, 2> SigmoidLayer::act(const Tensor<float, 2>& z){
     return z.unaryExpr(std::ref(logistic));

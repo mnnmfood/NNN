@@ -6,7 +6,7 @@
 #include "eigenFuns.h"
 #include "typedefs.h"
 
-inline const array<int, 1> dims {0};
+inline const std::array<int, 1> dims {0};
 
 Tensor<float, 0> MSE::cost(const Tensor<float, 2>& a, 
                 const Tensor<float, 2>& y){

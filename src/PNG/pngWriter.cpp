@@ -26,7 +26,8 @@ void PNGWriter::write(int dst_type, Tensor<byte, 2> data)
 {
     // In eigen tensor data is ordered column-wise so we
     // need to transpose
-    data = transposed(data);
+    Tensor<byte, 2> temp = transposed(data);
+    data = temp;
 
     nbytes = data.size() / m_info.height;
     write_arr(data.data(), m_info.height, nbytes, dst_type);

@@ -8,43 +8,38 @@
 
 // ---- Sum Matrix and Vector colwise or rowwise
 
-template<typename ArgType1, typename ArgType2>
 struct VecsumOp
 {
- typedef typename ArgType1::Scalar _Scalar;
-  VecsumOp(ArgType1& mat, ArgType2& vec, bool rowwise=true)
+  VecsumOp(Tensor<float, 2>& mat, Tensor<float, 1>& vec, bool rowwise=true)
     :m_mat{mat}, m_vec{vec}, m_rows{mat.dimension(0)}, m_cols{mat.dimension(1)}, 
     m_rowwise{rowwise}
   {
-    static_assert((ArgType1::NumDimensions == 2) && (ArgType2::NumDimensions == 1));
     if(rowwise){
       assert(m_mat.dimension(1)==m_vec.dimension(0));
     }else{
       assert(m_mat.dimension(0)==m_vec.dimension(0));
     }
   } 
-  const _Scalar operator()(Eigen::Index idx) const{
+  const float operator()(Eigen::Index idx) const{
     Eigen::Index row = idx % m_rows; 
     Eigen::Index col = idx / m_rows;
     return m_mat(row, col) + (m_rowwise?m_vec(col):m_vec(row));
   }
 private:
-  ArgType1 m_mat;
-  ArgType2 m_vec;
-  Eigen::Index m_rows;
-  Eigen::Index m_cols;
+  Tensor<float, 2> m_mat;
+  Tensor<float, 1> m_vec;
+  Index m_rows;
+  Index m_cols;
   bool m_rowwise;
 };
 
 // L-value version
-template<typename ArgType1, typename ArgType2>
-auto vecSum(ArgType1& mat, ArgType2& vec, bool rowwise=true){
-    return mat.nullaryExpr(VecsumOp<ArgType1, ArgType2>(mat, vec, rowwise));
+inline auto vecSum(Tensor<float, 2>& mat, Tensor<float, 1>& vec, bool rowwise=true){
+    return mat.nullaryExpr(VecsumOp(mat, vec, rowwise));
 }
 
 // R-value version
-template<typename ArgType1, typename ArgType2>
-auto vecSum(ArgType1&& mat, ArgType2&& vec, bool rowwise=true){
+inline auto vecSum(Tensor<float, 2>&& mat, Tensor<float, 1>& vec, bool rowwise=true){
     return mat.nullaryExpr(VecsumOp(mat, vec, rowwise));
 }
 // ---
@@ -132,39 +127,40 @@ private:
 
 // --- Reducer: cacluate min/max value
 template<typename ArgType>
-ArgType::Scalar min(const ArgType& t)
+typename ArgType::Scalar min(const ArgType& t)
 {
-    //array<Eigen::Index, 2> dims({0, 1});
+    using Scalar = typename ArgType::Scalar;
     std::array<Index, ArgType::NumDimensions> dims;
     for(size_t i{0}; i < ArgType::NumDimensions; i++){
       dims[i] = static_cast<Index>(i);
     }
-    scalar_comparer_op<T> comparer([](T x, T y)->T {return x < y ? x: y;});
-    Eigen::Tensor<T, 0> temp = t.reduce(dims, comparer);
+    scalar_comparer_op<Scalar> comparer([](Scalar x, Scalar y)->Scalar {return x < y ? x: y;});
+    Eigen::Tensor<Scalar, 0> temp = t.reduce(dims, comparer);
     return temp(0);
 }
 
-template<typename ArgType, ArgType::Scalar>
-ArgType::Scalar max(const ArgType& t)
+template<typename ArgType>
+typename ArgType::Scalar max(const ArgType& t)
 {
+    using Scalar = typename ArgType::Scalar;
     std::array<Index, ArgType::NumDimensions> dims;
     for(size_t i{0}; i < ArgType::NumDimensions; i++){
       dims[i] = static_cast<Index>(i);
     }
-    scalar_comparer_op<T> comparer([](T x, T y)->T {return x > y ? x: y;});
-    Eigen::Tensor<T, 0> temp = t.reduce(dims, comparer);
+    scalar_comparer_op<Scalar> comparer([](Scalar x, Scalar y)->Scalar {return x > y ? x: y;});
+    Eigen::Tensor<Scalar, 0> temp = t.reduce(dims, comparer);
     return temp(0);
 }
 // ---
 
 // --- Transpose tensor: by its first 2 dimensions
 template<typename ArgType>
-ArgType
+auto
 transposed(const ArgType& t){
-    Eigen::array<int, t.NumDimensions> shuffle_transpose;
+    std::array<int, ArgType::NumDimensions> shuffle_transpose;
     shuffle_transpose[0] = 1;
     shuffle_transpose[1] = 0;
-    for(int i{2}; i < t.NumDimensions; i++)
+    for(int i{2}; i < ArgType::NumDimensions; i++)
         shuffle_transpose[i] = i;
     return t.shuffle(shuffle_transpose);
 }
@@ -173,26 +169,25 @@ transposed(const ArgType& t){
 template<typename ArgType>
 struct max_normalize_op
 {
+    using Scalar = typename ArgType::Scalar;
     max_normalize_op(ArgType t)
         :m_max{max<ArgType>(t)}, m_min{min<ArgType>(t)}
     {
     }
-    float operator()(ArgType::Scalar a) const{
+    float operator()(Scalar a) const{
         return (a- m_min) / (m_max-m_min);
     }
 private:
-    ArgType::Scalar m_max;
-    ArgType::Scalar m_min;
+    Scalar m_max;
+    Scalar m_min;
 };
 
 // -- Slice tensor along given dimension:
 template<typename ArgType>
-ArgType sliced(const ArgType& arg, const std::vector<int>& indices, int dim)
+auto sliced(const ArgType& arg, const std::vector<int>& indices, int dim)
 {
-  assert(indices.size() < arg.dimension(dim));
-  assert(*std::max_element(indices.begin(), indices.end()) < arg.dimension(dim));
   std::array<Eigen::Index, ArgType::NumDimensions> out_size;
-  for(int i{0}; i < N; i++){
+  for(int i{0}; i < ArgType::NumDimensions; i++){
     out_size[i] = arg.dimension(i);
   }
   out_size[dim] = indices.size();
@@ -205,12 +200,12 @@ ArgType sliced(const ArgType& arg, const std::vector<int>& indices, int dim)
 }
 
 template<typename ArgType>
-ArgType sliced(const ArgType&& arg, const std::vector<int>& indices, int dim)
+auto sliced(const ArgType&& arg, const std::vector<int>& indices, int dim)
 {
   assert(indices.size() < arg.dimension(dim));
   assert(*std::max_element(indices.begin(), indices.end()) < arg.dimension(dim));
   std::array<Eigen::Index, ArgType::NumDimensions> out_size;
-  for(int i{0}; i < N; i++){
+  for(int i{0}; i < ArgType::NumDimensions; i++){
     out_size[i] = arg.dimension(i);
   }
   out_size[dim] = indices.size();
