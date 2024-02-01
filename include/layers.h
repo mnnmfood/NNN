@@ -17,8 +17,8 @@ inline std::mt19937 gen{rd()};
 class BaseLayer
 {
 public:
-    size_t _out_num_dims;
-    size_t _in_num_dims;
+    const size_t _out_num_dims;
+    const size_t _in_num_dims;
     BaseLayer* _next = nullptr;
     BaseLayer* _prev = nullptr;
 
@@ -50,6 +50,10 @@ class Layer: public BaseLayer
 protected:
     typedef typename traits<Derived>::out_shape_t out_shape_t;
     typedef typename traits<Derived>::in_shape_t in_shape_t;
+    using out_batch_shape_t = std::array<Index, 
+                std::tuple_size<out_shape_t>{} + 1>;
+    using in_batch_shape_t = std::array<Index, 
+                std::tuple_size<in_shape_t>{} + 1>;
     const size_t out_dims {std::tuple_size<out_shape_t>{}};
     const size_t in_dims {std::tuple_size<in_shape_t>{}};
     const size_t num_dims {traits<Derived>::NumDimensions};
@@ -70,12 +74,26 @@ protected:
     nabla_b_t _nabla_b;
     out_shape_t _out_shape;
     in_shape_t _in_shape;
+    out_batch_shape_t _out_batch_shape;
+    in_batch_shape_t _in_batch_shape;
 
 public:
-    Layer(out_shape_t out_shape, in_shape_t in_shape) 
+    Layer(out_shape_t out_shape)
+        :BaseLayer {out_dims, in_dims}, _out_shape{out_shape}
+    {
+        std::copy(_out_shape.begin(), _out_shape.end(), 
+            _out_batch_shape.begin());
+    }    
+    Layer(out_shape_t out_shape, in_shape_t in_shape)
         :BaseLayer {out_dims, in_dims}, _out_shape{out_shape},
         _in_shape{in_shape}
-    {}    
+    {
+        std::copy(_out_shape.begin(), _out_shape.end(), 
+            _out_batch_shape.begin());
+
+        std::copy(_in_shape.begin(), _in_shape.end(), 
+            _in_batch_shape.begin());
+    }    
     TensorWrapper<float> get_act(){
         return TensorWrapper(_act);
     }
@@ -96,6 +114,12 @@ public:
     TensorShape out_shape(){
         return TensorShape(_out_shape);
     }
+    in_shape_t prev_shape(){
+        return _prev->out_shape().get<in_shape_t>();
+    }
+    out_shape_t next_shape(){
+        return _next->in_shape().get<out_shape_t>();
+    }
 };
 
 template<size_t N>
@@ -110,16 +134,16 @@ public:
     InputLayer(std::array<Index, N> shape):
         Layer<InputLayer<N>>{shape, shape} ,_shape{shape}
     {
-        std::copy(_shape.begin(), _shape.end(), batch_shape.begin());
     }
     void init(Index n_samples){
-        batch_shape.back() = n_samples;
-        this->_act = out_t(batch_shape);
+        this->_out_batch_shape.back() = n_samples;
+        this->_in_batch_shape.back() = n_samples;
+        this->_act = out_t(this->_out_batch_shape);
     }
     void initParams(){}
     void fwd(){}
     void fwd(TensorWrapper<float>&& input){
-        this->_act = input.get(batch_shape);
+        this->_act = input.get(this->_in_batch_shape);
     }
     void bwd(){};
     void bwd(TensorWrapper<float>&& output){};
@@ -128,7 +152,6 @@ public:
 class FCLayer: public Layer<FCLayer>
 {
     std::array<Index, 1> _shape;
-    std::array<Index, 2> batch_shape;
 public:
     FCLayer(Index size);
     void init(Index batch_size);

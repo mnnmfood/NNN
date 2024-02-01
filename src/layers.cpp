@@ -59,51 +59,55 @@ BaseLayer* BaseLayer::prev(){return _prev;}
 
 // Fully connected layer
 FCLayer::FCLayer(Index size) 
-    :Layer{std::array<Index, 1>{size}, std::array<Index, 1>{size}},
-     _shape{size}{ 
-    std::copy(_shape.begin(), _shape.end(), batch_shape.begin());
+    :Layer{std::array<Index, 1>{size}}, _shape{size}
+{ 
+    std::copy(_shape.begin(), _shape.end(), _out_batch_shape.begin());
 }
 
 void FCLayer::initParams(){
-    in_shape_t prev_size = _prev->out_shape().get<in_shape_t>();
+    _in_shape = prev_shape();
+    std::copy(_in_shape.begin(), _in_shape.end(), _in_batch_shape.begin());
+
+    std::array<Index, 2> temp {_shape[0], _in_shape[0]};
     NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
-        static_cast<float>(_shape[0])
+        static_cast<float>(temp[0] * temp[1])
     ));
-    std::array<Index, 2> temp {_shape[0], prev_size[0]};
     _weights = weight_t(temp).unaryExpr(std::ref(sampleFun));
     _biases = bias_t(_shape[0]).unaryExpr(std::ref(sampleFun));
 }
 
 void FCLayer::init(Index batch_size){
-    batch_shape.back() = batch_size;
-    _act = out_t(batch_shape); 
-    _grad = in_t(batch_shape); 
-    _winputs = in_t(batch_shape);
-    _nabla_b = nabla_b_t(batch_shape); 
-    _nabla_w = nabla_weight_t(batch_shape); 
+    _out_batch_shape.back() = batch_size;
+    _in_batch_shape.back() = batch_size;
+    _act = out_t(_out_batch_shape); 
+    _grad = in_t(_in_batch_shape); 
+    _winputs = in_t(_in_batch_shape);
+    _nabla_b = nabla_b_t(_out_batch_shape); 
+    _nabla_w = nabla_weight_t(_out_batch_shape); 
 }
 
 void FCLayer::fwd(){
     assert(_prev != nullptr);
-    std::cout << _in_shape[0] << ", " << _in_shape[1];
-    _winputs = vecSum(_weights.contract(_prev->get_act().get(_in_shape), 
-        product_dims), _biases, false);
+    _winputs = vecSum(_weights.contract(_prev->get_act()
+        .get(_in_batch_shape), product_dims), 
+        _biases, false);
     _act = act(_winputs);
 }
 
 void FCLayer::fwd(TensorWrapper<float>&&){}
 void FCLayer::bwd(TensorWrapper<float>&& cost_grad){
     assert(_next == nullptr);
-    _nabla_b = cost_grad.get(_out_shape) * grad_act(_winputs);
-    _nabla_w = _nabla_b.contract(transposed(_prev->get_act().get(_in_shape)), product_dims);
+    _nabla_b = cost_grad.get(_out_batch_shape) * grad_act(_winputs);
+    _nabla_w = _nabla_b.contract(transposed(_prev->get_act()
+        .get(_in_batch_shape)), product_dims);
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
 void FCLayer::bwd(){
     assert(_next != nullptr);
-    _nabla_b = _next->get_grad().get(_out_shape) * grad_act(_winputs);
+    _nabla_b = _next->get_grad().get(_out_batch_shape) * grad_act(_winputs);
     _nabla_w = _nabla_b.contract(
-        transposed(_prev->get_act().get(_in_shape)), product_dims);
+        transposed(_prev->get_act().get(_in_batch_shape)), product_dims);
 
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }

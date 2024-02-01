@@ -13,7 +13,6 @@ class Sequential2
 
     std::vector<BaseLayer*> _layers;
     CostFun* _cost;
-
 public:
     const size_t num_layers;
     Sequential2(std::initializer_list<BaseLayer*> layers, CostFun* cost);

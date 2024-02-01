@@ -6,7 +6,6 @@
 Sequential2::Sequential2(std::initializer_list<BaseLayer*> layers, CostFun* cost)
     :_layers{layers}, _cost{cost}, num_layers{layers.size()}
 {
-
     // connect forward
     _layers[0]->_prev = nullptr;
     BaseLayer* prev_layer = _layers[0];
@@ -68,7 +67,6 @@ void Sequential2::SGD(Tensor<float, 2>& x,
                     Tensor<float, 2>& val_x,
                     Tensor<float, 2>&val_y){
     size_t train_size = x.dimension(1);
-    init(batch_size);
 
     // Prepare random indices 
     std::vector<int> indices(train_size);
@@ -76,7 +74,7 @@ void Sequential2::SGD(Tensor<float, 2>& x,
     for(size_t i{0}; i < train_size; i++){indices.push_back(i);} 
 
     for(int k{0}; k < epochs; k++){
-
+        init(batch_size);
         auto start = std::chrono::high_resolution_clock::now();
         std::shuffle(indices.begin(), indices.end(), gen);
 
@@ -105,10 +103,13 @@ void Sequential2::SGD(Tensor<float, 2>& x,
 float Sequential2::accuracy(Tensor<float, 2>& x, Tensor<float, 2>& y)
 {
     Eigen::Index test_size{x.dimension(1)};
-
+    init(test_size);
     fwdProp(x);
-    Tensor<float, 1> pred = _layers.back()
-        ->get_act().get();
+    std::array<Index, 1> shape = _layers.back()->
+                    out_shape().get<std::array<Index, 1>>();
+    std::array<Index, 2> batch_shape {shape[0], test_size};
+    Tensor<float, 2> pred = _layers.back()
+        ->get_act().get(batch_shape);
 
     Tensor<Eigen::Index, 0> y_pred;
     int sum{0};
