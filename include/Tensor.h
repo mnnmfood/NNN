@@ -32,17 +32,17 @@ public:
     
     // Return as Eigen 
     template<size_t NumDimensions>
-    Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>> get(const std::array<Index, NumDimensions>& size){
+    auto get(const std::array<Index, NumDimensions>& size){
         assert(checkSize(size));
         return Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>>(data, size);
     }
     template<size_t NumDimensions>
-    Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>> get(std::array<Index, NumDimensions>& size){
+    auto get(std::array<Index, NumDimensions>& size){
         assert(checkSize(size) && ("Tensor size is not compatible"));
         return Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>>(data, size);
     }
 
-    Eigen::TensorMap<Eigen::Tensor<T, 1>> get(){
+    auto get(){
         return Eigen::TensorMap<Eigen::Tensor<T, 1>>(data, _size);
     }
 };
@@ -53,10 +53,8 @@ class TensorShape
     size_t _size;
 public:
     template<size_t NumDimensions>
-    TensorShape(std::array<Index, NumDimensions>& shape) :_size{NumDimensions}{
-        data = new Index[_size];
-        std::copy(shape.begin(), shape.end(), data);
-    }
+    TensorShape(std::array<Index, NumDimensions>& shape) 
+    :_size{NumDimensions}, data{shape.data()}{}
     template<typename shape_t>
     shape_t get(){
         assert((std::tuple_size<shape_t>{} == _size) && ("Shapes are not compatible"));

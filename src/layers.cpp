@@ -88,9 +88,8 @@ void FCLayer::init(Index batch_size){
 
 void FCLayer::fwd(){
     assert(_prev != nullptr);
-    _winputs = vecSum(_weights.contract(_prev->get_act()
-        .get(_in_batch_shape), product_dims), 
-        _biases, false);
+    _winputs = vecSum(_weights.contract(prev_act(), 
+        product_dims), _biases, false);
     _act = act(_winputs);
 }
 
@@ -98,16 +97,15 @@ void FCLayer::fwd(TensorWrapper<float>&&){}
 void FCLayer::bwd(TensorWrapper<float>&& cost_grad){
     assert(_next == nullptr);
     _nabla_b = cost_grad.get(_out_batch_shape) * grad_act(_winputs);
-    _nabla_w = _nabla_b.contract(transposed(_prev->get_act()
-        .get(_in_batch_shape)), product_dims);
+    _nabla_w = _nabla_b.contract(transposed(prev_act()), product_dims);
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
 void FCLayer::bwd(){
     assert(_next != nullptr);
-    _nabla_b = _next->get_grad().get(_out_batch_shape) * grad_act(_winputs);
+    _nabla_b = next_grad() * grad_act(_winputs);
     _nabla_w = _nabla_b.contract(
-        transposed(_prev->get_act().get(_in_batch_shape)), product_dims);
+        transposed(prev_act()), product_dims);
 
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }

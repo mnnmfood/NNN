@@ -90,7 +90,6 @@ public:
     {
         std::copy(_out_shape.begin(), _out_shape.end(), 
             _out_batch_shape.begin());
-
         std::copy(_in_shape.begin(), _in_shape.end(), 
             _in_batch_shape.begin());
     }    
@@ -119,6 +118,12 @@ public:
     }
     out_shape_t next_shape(){
         return _next->in_shape().get<out_shape_t>();
+    }
+    auto prev_act(){
+        return _prev->get_act().get(_in_batch_shape);
+    }
+    auto next_grad(){
+        return _next->get_grad().get(_out_batch_shape);
     }
 };
 
