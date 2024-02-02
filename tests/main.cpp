@@ -46,11 +46,12 @@ int main(){
     //ConvolLayer c(std::array<Index, 3> {2, 2, 30});
     // network architecture
     Sequential2 model({
-        new InputLayer(std::array<Index, 1> {784}),
         new SigmoidLayer(30), 
         new SigmoidLayer(10)
         }
-        , new MSE());
+        , new MSE(), 
+        std::array<Index, 1>{784},
+        std::array<Index, 1>{10});
 
     // Optimize using Stochastic Gradient Descent
     int epochs = 20;

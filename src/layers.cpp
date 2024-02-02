@@ -53,7 +53,8 @@ public:
 
  // Generic Layer
 BaseLayer::BaseLayer(size_t out_dims, size_t in_dims) 
-:_out_num_dims{out_dims}, _in_num_dims {in_dims} {}
+:_out_num_dims{out_dims}, _in_num_dims {in_dims} {
+}
 BaseLayer* BaseLayer::next(){return _next;}
 BaseLayer* BaseLayer::prev(){return _prev;}
 

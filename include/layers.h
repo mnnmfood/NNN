@@ -54,8 +54,6 @@ protected:
                 std::tuple_size<out_shape_t>{} + 1>;
     using in_batch_shape_t = std::array<Index, 
                 std::tuple_size<in_shape_t>{} + 1>;
-    const size_t out_dims {std::tuple_size<out_shape_t>{}};
-    const size_t in_dims {std::tuple_size<in_shape_t>{}};
     const size_t num_dims {traits<Derived>::NumDimensions};
     using out_t = Tensor<float, std::tuple_size<out_shape_t>{}+1>;
     using in_t = Tensor<float, std::tuple_size<in_shape_t>{}+1>;
@@ -79,14 +77,15 @@ protected:
 
 public:
     Layer(out_shape_t out_shape)
-        :BaseLayer {out_dims, in_dims}, _out_shape{out_shape}
+        :BaseLayer {std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{}},
+        _out_shape{out_shape}
     {
         std::copy(_out_shape.begin(), _out_shape.end(), 
             _out_batch_shape.begin());
     }    
     Layer(out_shape_t out_shape, in_shape_t in_shape)
-        :BaseLayer {out_dims, in_dims}, _out_shape{out_shape},
-        _in_shape{in_shape}
+        :BaseLayer {std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{}}, 
+        _out_shape{out_shape}, _in_shape{in_shape}
     {
         std::copy(_out_shape.begin(), _out_shape.end(), 
             _out_batch_shape.begin());
@@ -132,12 +131,10 @@ class InputLayer: public Layer<InputLayer<N>>
 {
     typedef typename traits<InputLayer<N>>::out_shape_t out_shape_t;
     using out_t = Tensor<float, std::tuple_size<out_shape_t>{}+1>;
-    std::array<Index, N> _shape;
-    std::array<Index, N+1> batch_shape;
 public:
     const size_t _size = 0;
     InputLayer(std::array<Index, N> shape):
-        Layer<InputLayer<N>>{shape, shape} ,_shape{shape}
+        Layer<InputLayer<N>>{shape, shape}
     {
     }
     void init(Index n_samples){
@@ -152,6 +149,33 @@ public:
     }
     void bwd(){};
     void bwd(TensorWrapper<float>&& output){};
+};
+
+template<size_t N>
+class OutputLayer: public Layer<OutputLayer<N>>
+{
+    typedef typename traits<InputLayer<N>>::out_shape_t out_shape_t;
+    using out_t = Tensor<float, std::tuple_size<out_shape_t>{}+1>;
+public:
+    const size_t _size = 0;
+    OutputLayer(std::array<Index, N> shape):
+        Layer<OutputLayer<N>>{shape, shape}
+    {
+    }
+    void init(Index n_samples){
+        this->_out_batch_shape.back() = n_samples;
+        this->_in_batch_shape.back() = n_samples;
+        this->_grad = out_t(this->_out_batch_shape);
+    }
+    void initParams(){}
+    void fwd(){
+      this->_act = this->prev_act();  
+    }
+    void fwd(TensorWrapper<float>&& input){}
+    void bwd(){};
+    void bwd(TensorWrapper<float>&& output){
+        this->_grad = output.get(this->_out_batch_shape);
+    }
 };
 
 class FCLayer: public Layer<FCLayer>

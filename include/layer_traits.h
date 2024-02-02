@@ -24,6 +24,17 @@ template<size_t N> struct traits<InputLayer<N>>
     const static size_t NumDimensions {N};
 };
 
+template<size_t N> class OutputLayer;
+template<size_t N> struct traits<OutputLayer<N>>
+{
+    typedef std::array<Index, N> out_shape_t;
+    typedef std::array<Index, N> in_shape_t;
+    const static bool trainable = false;
+    const static size_t NumDimensions {N};
+};
+
+
+
 #if 0
 class ConvolLayer;
 template<> struct traits<ConvolLayer>

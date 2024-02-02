@@ -49,17 +49,19 @@ public:
 
 class TensorShape
 {
-    Index* data;
     size_t _size;
+    Index* data;
 public:
     template<size_t NumDimensions>
     TensorShape(std::array<Index, NumDimensions>& shape) 
     :_size{NumDimensions}, data{shape.data()}{}
     template<typename shape_t>
     shape_t get(){
-        assert((std::tuple_size<shape_t>{} == _size) && ("Shapes are not compatible"));
-        shape_t temp;
-        std::copy(data, data + _size, temp.data());
+        assert((std::tuple_size<shape_t>{} == _size) && ("Tensor shapes are not compatible"));
+        shape_t temp {};
+        for(size_t i{0}; i < _size; i++){
+            temp[i] = data[i];
+        }
         return temp;
     }
 };

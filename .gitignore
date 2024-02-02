@@ -4,6 +4,8 @@ build/*
 !build/.gitignore 
 data/mnist_png
 tests/*.png
+src/*.png
+include/*.png
 
 *.exe
 *.zip

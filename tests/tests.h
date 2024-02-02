@@ -10,11 +10,12 @@ void printShape(const Matrix<float, Dynamic, Dynamic>& a){
 
 void testSequentialInit(){
     Sequential2 model({
-        new InputLayer(std::array<Index, 1> {784}),
         new SigmoidLayer(30), 
         new SigmoidLayer(10)
         }
-        , new MSE());
+        , new MSE(),
+        std::array<Index, 1>{784},
+        std::array<Index, 1>{10});
 
     size_t n_samples = 10;
     model.init(n_samples);
@@ -23,11 +24,12 @@ void testSequentialInit(){
 
 void testFeedFwd(){
     Sequential2 model({
-        new InputLayer(std::array<Index, 1> {2}),
         new SigmoidLayer(30), 
         new SigmoidLayer(10)
         }
-        , new MSE());
+        , new MSE(),
+        std::array<Index, 1>{2},
+        std::array<Index, 1>{10});
 
     Eigen::Tensor<float, 2> x(2, 10);
     //Eigen::VectorXf xi {{5, 3}};
@@ -41,11 +43,12 @@ void testFeedFwd(){
 
 void testBackProp(){
     Sequential2 model({
-        new InputLayer(std::array<Index, 1> {6}),
         new SigmoidLayer(30), 
         new SigmoidLayer(3)
         }
-        , new MSE());
+        , new MSE(),
+        std::array<Index, 1>{6},
+        std::array<Index, 1>{3});
 
     int n_samples {2};
 
