@@ -1,5 +1,6 @@
 #include <sys/stat.h>
 #include "pngWrapper.h"
+#include "layers.h"
 
 inline const std::string data_dir {"../data/"};
 inline const std::string out_dir {"./"};
@@ -102,8 +103,38 @@ void testBulk()
     }
 }
 
+void testConvolve(){
+    std::cout << "-- Test Convolution" << "\n";
+    std::string dataDir {"../data/mnist_csv/"};
+    Tensor<float, 2> data;
+    load_csv(dataDir + "train_x.csv", data);
+    Tensor<float, 2> x;
+    x = data.slice(std::array<Index, 2>({0, 0}), 
+        std::array<Index, 2>({data.dimension(0), 10}));
+    Sequential2 model ({
+        new ReshapeLayer<1, 3>(std::array<Index, 3>{28, 28, 1}),
+        new ConvolLayer(std::array<Index, 3>{2, 2, 1})}, 
+        new MSE(),
+        std::array<Index, 1> {784}, std::array<Index, 3>{27, 27, 1}
+        );
+    size_t batch_size = x.dimension(1); 
+    model.init(batch_size);
+    model.fwdProp(x);
+    Tensor<float, 4> result = model.output(batch_size);
+
+    for(int i{0}; i < batch_size; i++){
+        Tensor<float, 2> image = result.chip(i, 3).chip(0, 2);
+        Tensor<byte, 2> image_norm = 
+            image.unaryExpr(max_normalize_op(result, 255)).cast<byte>();
+        std::ofstream fpo(out_dir + "convol" + std::to_string(i) + ".png", std::ios::binary);
+        png::PNGWriter writer(fpo, png::pngInfo(27, 27));
+        writer.write(PNG_COLOR_TYPE_GRAY, image_norm);
+    }
+}
+
 void testPNG()
 {
+    testConvolve();
     testColor();
     testGray();
     testReset();

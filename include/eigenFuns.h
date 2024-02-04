@@ -170,16 +170,18 @@ template<typename ArgType>
 struct max_normalize_op
 {
     using Scalar = typename ArgType::Scalar;
-    max_normalize_op(ArgType t)
-        :m_max{max<ArgType>(t)}, m_min{min<ArgType>(t)}
+    max_normalize_op(ArgType t, int mult)
+        :m_max{max<ArgType>(t)}, m_min{min<ArgType>(t)},
+        m_mult{mult}
     {
     }
     float operator()(Scalar a) const{
-        return (a- m_min) / (m_max-m_min);
+        return m_mult * (a- m_min) / (m_max-m_min);
     }
 private:
     Scalar m_max;
     Scalar m_min;
+    int m_mult;
 };
 
 // -- Slice tensor along given dimension:
@@ -215,6 +217,47 @@ auto sliced(const ArgType&& arg, const std::vector<int>& indices, int dim)
     out_slice.chip(i, dim) = arg.chip(indices[i], dim);
   }
   return out_slice;
+}
+
+inline const std::array<Index, 2> convolve_dims ({0, 1});
+
+template<typename ArgType1, typename ArgType2>
+ArgType1 convolveBatch(ArgType1& src, ArgType2& kernels){
+    std::array<Index, 4> extents1 ({src.dimension(0), 
+                                            src.dimension(1), 1, 1});
+    std::array<Index, 4> offsets1;
+
+    std::array<Index, 3> extents2 ({kernels.dimension(0), 
+                                            kernels.dimension(1), 1});
+    std::array<Index, 3> offsets2;
+
+    Tensor<float, 4> temp (src.dimension(0) - kernels.dimension(0) + 1,
+                src.dimension(1) - kernels.dimension(1) + 1,
+                src.dimension(2) * kernels.dimension(2),
+                src.dimension(3));
+    std::array<Index, 4> extents3 ({temp.dimension(0), 
+                                            temp.dimension(1), 1, 1});
+    std::array<Index, 4> offsets3;
+
+    for(Index i{0}; i < src.dimension(3); i++){
+        for(Index k{0}; k < src.dimension(2); k++){
+            for(Index l{0}; l < kernels.dimension(2); l++){
+                offsets1 = {0, 0, k, i};
+                offsets2 = {0, 0, l};
+                offsets3 = {0, 0, k*kernels.dimension(2) + l, i};
+
+                temp.slice(offsets3, extents3) = 
+                    src.slice(offsets1, extents1)
+                    .convolve(kernels.chip(l, 2), 
+                    convolve_dims);
+            }
+        }
+    }
+    return temp;
+}
+
+inline Tensor<float, 4> convolveBatch(Tensor<float, 4>&& src, Tensor<float, 3>& kernels){
+  return convolveBatch(src, kernels);
 }
 
 #endif

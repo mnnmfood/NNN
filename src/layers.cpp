@@ -8,6 +8,7 @@ scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y
 
 inline const Eigen::array<Eigen::IndexPair<int>, 1> product_dims = 
   {Eigen::IndexPair<int>(1, 0) };
+
 // Util class for weight initialization
 class NormalSample
 {
@@ -69,7 +70,7 @@ void FCLayer::initParams(){
     _in_shape = prev_shape();
     std::copy(_in_shape.begin(), _in_shape.end(), _in_batch_shape.begin());
 
-    std::array<Index, 2> temp {_shape[0], _in_shape[0]};
+    std::array<Index, 2> temp {_out_shape[0], _in_shape[0]};
     NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
         static_cast<float>(temp[0] * temp[1])
     ));
@@ -168,35 +169,39 @@ Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
 
 // Convolutional layer
 
-#if 0
-ConvolLayer::ConvolLayer(std::array<int, 3> shape)
-    :Layer{shape[0]*shape[1]*shape[2]}, _shape{shape}
+ConvolLayer::ConvolLayer(std::array<Index, 3> shape)
+    :Layer{}
 {
+    _weights = weight_t(shape);
+    _weights.setConstant(1);
+    _biases = bias_t(shape[2]);
+    _biases.setConstant(1);
 }
 
-void ConvolLayer::init(size_t n_samples){
-    _output_shape = {static_cast<int>(_size), static_cast<int>(n_samples)}; 
-    _act = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
-    _grad = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
-    _winputs = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
-    _nabla_b = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
-    _nabla_w = Tensor<float, 4>(_shape[0], _shape[1], _shape[2], n_samples);
+void ConvolLayer::init(Index batch_size){
+    _in_shape = prev_shape();
+    _out_shape = {_in_shape[0] - _weights.dimension(0) + 1,
+        _in_shape[1] - _weights.dimension(1) + 1, 
+        _in_shape[2] * _weights.dimension(2)};
+
+    std::copy(_in_shape.begin(), _in_shape.end(), 
+        _in_batch_shape.begin());
+    std::copy(_out_shape.begin(), _out_shape.end(), 
+        _out_batch_shape.begin());
+
+    _out_batch_shape.back() = batch_size;
+    _in_batch_shape.back() = batch_size;
 }
 
 void ConvolLayer::initParams(){
-    size_t prev_size = _prev->getSize();
-    NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
-        static_cast<float>(prev_size)
-    ));
-    _weights = Tensor<float, 3>(_shape[0], _shape[1], _shape[2]);
-    _biases = Tensor<float, 2>(_shape[2]);
 }
-
-Tensor<float, 4> ConvolLayer::get_act() {return _act;}
-Tensor<float, 4> ConvolLayer::get_grad() {return _grad;}
 
 void ConvolLayer::fwd(){
-    assert(_prev != nullptr);
-    _winputs = _prev->get_act().reshape()
+    _act = convolveBatch(prev_act(), _weights);
 }
-#endif
+
+void ConvolLayer::bwd(){
+}
+
+void ConvolLayer::fwd(TensorWrapper<float>&&){}
+void ConvolLayer::bwd(TensorWrapper<float>&&){}

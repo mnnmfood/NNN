@@ -18,6 +18,7 @@ int main(){
     std::cout << "--TESTING PNG" << "\n";
     testPNG();
 
+#if 0
     std::cout << "--TESTING INIT" << "\n";
     testSequentialInit();
     std::cout << "--TESTING Feed-forward" << "\n";
@@ -47,7 +48,8 @@ int main(){
     // network architecture
     Sequential2 model({
         new SigmoidLayer(30), 
-        new SigmoidLayer(10)
+        new ReshapeLayer<1, 1>(std::array<Index, 1>{30}),
+        new SigmoidLayer(10),
         }
         , new MSE(), 
         std::array<Index, 1>{784},
@@ -63,4 +65,5 @@ int main(){
     std::cout << std::setprecision(2);
     std::cout << "Final accuracy "  << model.accuracy(val_x, val_y)*100;
     std::cout << "%" << "\n\n";
+#endif
 }

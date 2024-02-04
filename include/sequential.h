@@ -22,6 +22,7 @@ public:
         std::array<Index, num_dims_in> in_shape, std::array<Index, num_dims_out> out_shape)
     :_layers{layers}, _cost{cost}, num_layers{_layers.size() + 2},
     _in_shape{in_shape}, _out_shape{out_shape}{
+        // Add input and output layers
         _layers.insert(_layers.begin(), new InputLayer(_in_shape));
         _layers.push_back(new OutputLayer(_out_shape));
         // connect forward
@@ -30,14 +31,13 @@ public:
 
         for(size_t i{1}; i < num_layers; i++){
             _layers[i]->_prev = prev_layer;
-            _layers[i]->initParams();
-
             prev_layer = _layers[i];
         }
         // connect backwards
         BaseLayer* next_layer = nullptr;
         for(size_t i{num_layers}; i > 0; i--){
             _layers[i-1]->_next = next_layer;
+            _layers[i-1]->initParams();
             next_layer = _layers[i-1];
         }
      }
@@ -69,13 +69,13 @@ public:
     void bkwProp(Tensor<float, 2>&& output){bkwProp(output);}
     void fwdProp(Tensor<float, 2>&& input){fwdProp(input);}
 
-    void SGD(Tensor<float, 2>& x,
-            Tensor<float, 2>& y, 
+    void SGD(Tensor<float, num_dims_in+1>& x,
+            Tensor<float, num_dims_out+1>& y, 
             int epochs, int batch_size, float lr, float mu,
-            Tensor<float, 2>& val_x,
+            Tensor<float, num_dims_in+1>& val_x,
             Tensor<float, 2>&val_y){
 
-        size_t train_size = x.dimension(1);
+        size_t train_size = x.dimension(num_dims_in);
 
         // Prepare random indices 
         std::vector<int> indices(train_size);
@@ -90,8 +90,8 @@ public:
             for(size_t l{0}; l < train_size-batch_size; l+=batch_size){
 
                 std::copy_n(indices.begin()+l, batch_size, sub_indices.begin());
-                fwdProp(sliced(x, sub_indices, 1));
-                bkwProp(sliced(y, sub_indices, 1));
+                fwdProp(sliced(x, sub_indices, num_dims_in));
+                bkwProp(sliced(y, sub_indices, num_dims_out));
 
 
                 for(size_t i{0}; i < num_layers; i++){
@@ -109,13 +109,15 @@ public:
         }
     }
 
-    float accuracy(Tensor<float, 2>& x, Tensor<float, 2>& y){
-        Eigen::Index test_size{x.dimension(1)};
+    float accuracy(Tensor<float, num_dims_in + 1>& x, Tensor<float, 2>& y){
+        Eigen::Index test_size{x.dimension(num_dims_in)};
         init(test_size);
         fwdProp(x);
-        std::array<Index, 1> shape = _layers.back()->
-                        out_shape().get<std::array<Index, 1>>();
-        std::array<Index, 2> batch_shape {shape[0], test_size};
+        std::array<Index, num_dims_out + 1> batch_shape;
+        for(size_t i{0}; i < num_dims_out; i++){
+            batch_shape[i] = _out_shape[i];
+        }
+        batch_shape.back() = test_size;
         Tensor<float, 2> pred = _layers.back()
             ->get_act().get(batch_shape);
 
@@ -124,18 +126,23 @@ public:
 
         for(Eigen::Index i{0}; i < test_size; i++){
             //pred.col(i).maxCoeff(&y_pred);
-            y_pred = pred.chip(i, 1).argmax();
+            y_pred = pred.chip(i, num_dims_out).argmax();
             sum += (static_cast<int>(y(i)) == y_pred(0));
         }
 
         return static_cast<float>(sum) / static_cast<float>(test_size);
     }
 
-    ~Sequential2(){
-        delete _cost;
-        for(size_t i{0}; i < num_layers; i++){
-            delete _layers[i]; 
-        }
+    float accuracy(Tensor<float, num_dims_in>&& x, Tensor<float, 2>&& y){
+        return accuracy(x, y);
+    }
+
+    Tensor<float, num_dims_out + 1> output(Index batch_size){
+        std::array<Index, num_dims_out + 1> temp;
+        std::copy(_out_shape.begin(), _out_shape.end(), 
+            temp.begin());
+        temp.back() = batch_size;
+        return _layers.back()->get_act().get(temp);
     }
 };
 

@@ -76,6 +76,9 @@ protected:
     in_batch_shape_t _in_batch_shape;
 
 public:
+    Layer(): 
+    BaseLayer {std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{}}
+    {}
     Layer(out_shape_t out_shape)
         :BaseLayer {std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{}},
         _out_shape{out_shape}
@@ -113,15 +116,19 @@ public:
         return TensorShape(_out_shape);
     }
     in_shape_t prev_shape(){
+        assert(_prev != nullptr);
         return _prev->out_shape().get<in_shape_t>();
     }
     out_shape_t next_shape(){
+        assert(_next != nullptr);
         return _next->in_shape().get<out_shape_t>();
     }
     auto prev_act(){
+        assert(_prev != nullptr);
         return _prev->get_act().get(_in_batch_shape);
     }
     auto next_grad(){
+        assert(_next != nullptr);
         return _next->get_grad().get(_out_batch_shape);
     }
 };
@@ -165,7 +172,6 @@ public:
     void init(Index n_samples){
         this->_out_batch_shape.back() = n_samples;
         this->_in_batch_shape.back() = n_samples;
-        this->_grad = out_t(this->_out_batch_shape);
     }
     void initParams(){}
     void fwd(){
@@ -176,6 +182,44 @@ public:
     void bwd(TensorWrapper<float>&& output){
         this->_grad = output.get(this->_out_batch_shape);
     }
+};
+
+template<size_t N_in, size_t N_out>
+class ReshapeLayer: public Layer<ReshapeLayer<N_in, N_out>>
+{
+    bool checkSize(){
+        size_t in_total_size {1}, out_total_size {1};
+        for(size_t i{0}; i < N_in; i++){
+            in_total_size *= this->_in_shape[i];
+        }
+        for(size_t i{0}; i < N_out; i++){
+            out_total_size *= this->_out_shape[i];
+        }
+        return in_total_size == out_total_size;
+    }
+public:
+    ReshapeLayer(std::array<Index, N_out> out_shape) 
+        :Layer<ReshapeLayer<N_in, N_out>>{out_shape}{}
+    void init(Index batch_size){
+        this->_out_batch_shape.back() = batch_size;
+        this->_in_batch_shape.back() = batch_size;
+    }
+    void initParams(){
+        this->_in_shape = this->prev_shape();
+        assert(checkSize() && "Incompatible reshape");
+        std::copy(this->_in_shape.begin(), this->_in_shape.end(), 
+            this->_in_batch_shape.begin());
+    }
+    void fwd(){
+        this->_act = this->prev_act()
+            .reshape(this->_out_batch_shape);  
+    }
+    void fwd(TensorWrapper<float>&& input){}
+    void bwd(){
+        this->_grad = this->next_grad()
+            .reshape(this->_in_batch_shape);  
+    };
+    void bwd(TensorWrapper<float>&& output){}
 };
 
 class FCLayer: public Layer<FCLayer>
@@ -220,41 +264,17 @@ public:
     Tensor<float, 2> grad_act(const Tensor<float, 2>&);
 };
 
-#endif
-#if 0
-class ConvolLayer:public Layer
+class ConvolLayer:public Layer<ConvolLayer>
 {
-protected:
-    Tensor<float, 3> _weights;
-    Tensor<float, 2> _biases;
-
-    Tensor<float, 2> _winputs; 
-
-    Tensor<float, 4> _act;
-    Tensor<float, 4> _grad;
-
-    Tensor<float, 2> _nabla_b;
-    Tensor<float, 3> _nabla_w;
-
-    std::array<int, 2> _output_shape;
 public:
-    const size_t _size = 0;
-    const std::array<int, 3> _shape {0, 0, 0};
-    ConvolLayer(std::array<int, 3>);
-    void init(size_t n_samples);
+    ConvolLayer(std::array<Index, 3>);
+    void init(Index batch_size);
     void initParams();
 
+    void fwd(TensorWrapper<float>&&);
+    void bwd(TensorWrapper<float>&&);
     void fwd();
     void bwd();
-
-    Tensor<float, 4> act(const Tensor<float, 2>&);
-    Tensor<float, 4> grad_act(const Tensor<float, 2>&);
-
-    Tensor<float, 4> get_act();
-    Tensor<float, 4> get_grad();
-
-    virtual ~ConvolLayer() = default;
-
-    void update(float, float, float);
 };
+
 #endif

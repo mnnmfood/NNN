@@ -33,19 +33,22 @@ template<size_t N> struct traits<OutputLayer<N>>
     const static size_t NumDimensions {N};
 };
 
+template<size_t N_in, size_t N_out> class ReshapeLayer;
+template<size_t N_in, size_t N_out> struct traits<ReshapeLayer<N_in, N_out>>
+{
+    typedef std::array<Index, N_out> out_shape_t;
+    typedef std::array<Index, N_in> in_shape_t;
+    const static bool trainable = false;
+    const static size_t NumDimensions {N_out};
+};
 
-
-#if 0
 class ConvolLayer;
 template<> struct traits<ConvolLayer>
 {
     typedef std::array<Index, 3> out_shape_t;
     typedef std::array<Index, 3> in_shape_t;
-    static bool trainable;
-    static size_t NumDimensions;
+    const static bool trainable = true;
+    const static size_t NumDimensions = 3;
 };
-bool traits<ConvolLayer>::trainable = true;
-size_t traits<ConvolLayer>::NumDimensions = 3;
-#endif
 
 #endif
