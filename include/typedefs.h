@@ -11,4 +11,9 @@ using byte = unsigned char;
 
 struct dummyTensor{};
 
+enum ConvolTypes{
+    valid,
+    full,
+};
+
 #endif

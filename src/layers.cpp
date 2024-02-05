@@ -9,6 +9,8 @@ scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y
 inline const Eigen::array<Eigen::IndexPair<int>, 1> product_dims = 
   {Eigen::IndexPair<int>(1, 0) };
 
+inline const Eigen::array<bool, 4> reverse_dims {true, true, 
+                                                false, false};
 // Util class for weight initialization
 class NormalSample
 {
@@ -172,10 +174,12 @@ Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
 ConvolLayer::ConvolLayer(std::array<Index, 3> shape)
     :Layer{}
 {
-    _weights = weight_t(shape);
-    _weights.setConstant(1);
-    _biases = bias_t(shape[2]);
-    _biases.setConstant(1);
+
+    NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
+        static_cast<float>(shape[0] * shape[1])
+    ));
+    _weights = weight_t(shape).unaryExpr(std::ref(sampleFun));
+    _biases = bias_t(shape[2]).unaryExpr(std::ref(sampleFun));
 }
 
 void ConvolLayer::init(Index batch_size){
@@ -197,10 +201,14 @@ void ConvolLayer::initParams(){
 }
 
 void ConvolLayer::fwd(){
-    _act = convolveBatch(prev_act(), _weights);
+    _act = convolveBatch(prev_act(), _weights, valid);
 }
 
 void ConvolLayer::bwd(){
+    //_nabla_w = convolveBatch(prev_act(), next_grad(), valid);
+    //_grad = convolveBatch(
+    //    _weights.reverse(reverse_dims),
+    //    next_grad(), full);
 }
 
 void ConvolLayer::fwd(TensorWrapper<float>&&){}
