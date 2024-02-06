@@ -183,11 +183,6 @@ ConvolLayer::ConvolLayer(std::array<Index, 3> shape)
 }
 
 void ConvolLayer::init(Index batch_size){
-    _in_shape = prev_shape();
-    _out_shape = {_in_shape[0] - _weights.dimension(0) + 1,
-        _in_shape[1] - _weights.dimension(1) + 1, 
-        _in_shape[2] * _weights.dimension(2)};
-
     std::copy(_in_shape.begin(), _in_shape.end(), 
         _in_batch_shape.begin());
     std::copy(_out_shape.begin(), _out_shape.end(), 
@@ -199,6 +194,10 @@ void ConvolLayer::init(Index batch_size){
 }
 
 void ConvolLayer::initParams(){
+    _in_shape = prev_shape();
+    _out_shape = {_in_shape[0] - _weights.dimension(0) + 1,
+        _in_shape[1] - _weights.dimension(1) + 1, 
+        _in_shape[2] * _weights.dimension(2)};
 }
 
 void ConvolLayer::fwd(){

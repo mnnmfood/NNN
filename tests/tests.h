@@ -43,31 +43,33 @@ void testFeedFwd(){
 
 void testBackProp(){
     Sequential2 model({
-        new SigmoidLayer(30), 
-        new SigmoidLayer(3)
+        new ReshapeLayer<1, 3>(std::array<Index, 3>({6,6,1})),
+        new ConvolLayer(std::array<Index, 3>({3, 3, 2})),
+        new ReshapeLayer<3, 1>(std::array<Index, 1>({32})),
+        new SigmoidLayer(32)
         }
         , new MSE(),
-        std::array<Index, 1>{6},
-        std::array<Index, 1>{3});
+        std::array<Index, 1>{36},
+        std::array<Index, 1>{32});
 
     int n_samples {2};
 
-    //Eigen::VectorXf xi {{2734, 342, 24, 23, 1, 90}};
-    Eigen::Tensor<float, 1> xi(6);
-    xi.setValues({1, 1, 1, 1, 1, 1});
-    //Eigen::MatrixXf x(6, n_samples);
-    Eigen::Tensor<float, 2> x(6, n_samples);
-    for(int i{0}; i < n_samples; i++){x.chip(i, 1) = xi;}
+    Eigen::Tensor<float, 1> xi(36);
+    Eigen::Tensor<float, 2> x(36, n_samples);
+    for(int i{0}; i < n_samples; i++){
+        xi.setConstant(i);
+        x.chip(i, 1) = xi;
+    }
 
     model.init(n_samples);
     model.fwdProp(x);
 
-    //Eigen::VectorXf yi {{234, 53, 12}};
-    Eigen::Tensor<float, 1> yi(3); 
-    yi.setValues({0.3, 0.5, 0.7});
-    //Eigen::MatrixXf y(3, n_samples);
-    Eigen::Tensor<float, 2> y(3, n_samples);
-    for(int i{0}; i < n_samples; i++){y.chip(i, 1) = yi;}
+    Eigen::Tensor<float, 1> yi(32); 
+    Eigen::Tensor<float, 2> y(32, n_samples);
+    for(int i{0}; i < n_samples; i++){
+        y.setConstant(i);
+        y.chip(i, 1) = yi;
+    }
 
     model.bkwProp(y);
     std::cout << "Success\n";

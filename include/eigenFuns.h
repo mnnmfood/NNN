@@ -265,11 +265,11 @@ convolveKernels(Tensor<float, 3>& src, Tensor<float, 3>& kernels, ConvolTypes ty
     std::array<Index, 3> extent ({
         temp.dimension(0),
         temp.dimension(1),
-        temp.dimension(2)
+        1
     });
 
     for(Index i{0}; i < kernels.dimension(2); i++){
-        offset = {0, 0, i*temp.dimension(2)};
+        offset = {0, 0, i*src.dimension(2)};
         temp.slice(offset, extent) = convolveDepth(
             src, kernels.chip(i, 2), type
         );
@@ -307,6 +307,7 @@ convolveBatch(Tensor<float, 4>& src, Tensor<float, 3>& kernels, ConvolTypes type
     std::array<Index, 4> offsets2;
 
     for(Index i{0}; i < src.dimension(3); i++){
+
         temp.chip(i, 3) = convolveKernels(
             src.chip(i, 3), 
             kernels,

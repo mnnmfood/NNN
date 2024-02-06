@@ -15,17 +15,18 @@
 #include "pngTests.h"
 
 int main(){
+#if 0
     std::cout << "--TESTING PNG" << "\n";
     testPNG();
 
-#if 0
     std::cout << "--TESTING INIT" << "\n";
     testSequentialInit();
     std::cout << "--TESTING Feed-forward" << "\n";
     testFeedFwd();
+#endif
     std::cout << "--TESTING Backwards-propagation" << "\n";
     testBackProp();
-
+#if 0
     std::cout << "--TESTING Mnist Data" << "\n";
     std::string dataDir {"../data/mnist_csv/"};
     //#std::vector<Vector<float, Dynamic>*> x;

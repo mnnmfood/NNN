@@ -31,13 +31,13 @@ public:
 
         for(size_t i{1}; i < num_layers; i++){
             _layers[i]->_prev = prev_layer;
+            _layers[i-1]->initParams();
             prev_layer = _layers[i];
         }
         // connect backwards
         BaseLayer* next_layer = nullptr;
         for(size_t i{num_layers}; i > 0; i--){
             _layers[i-1]->_next = next_layer;
-            _layers[i-1]->initParams();
             next_layer = _layers[i-1];
         }
      }
