@@ -172,13 +172,13 @@ Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
 // Convolutional layer
 
 ConvolLayer::ConvolLayer(std::array<Index, 3> shape)
-    :Layer{}
+    :Layer{}, _shape{shape}
 {
-
     NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
         static_cast<float>(shape[0] * shape[1])
     ));
     _weights = weight_t(shape).unaryExpr(std::ref(sampleFun));
+    _nabla_w = nabla_weight_t(shape);
     _biases = bias_t(shape[2]).unaryExpr(std::ref(sampleFun));
 }
 
@@ -195,6 +195,7 @@ void ConvolLayer::init(Index batch_size){
 
     _out_batch_shape.back() = batch_size;
     _in_batch_shape.back() = batch_size;
+    _grad = in_t(_in_batch_shape);
 }
 
 void ConvolLayer::initParams(){
@@ -205,11 +206,73 @@ void ConvolLayer::fwd(){
 }
 
 void ConvolLayer::bwd(){
-    //_nabla_w = convolveBatch(prev_act(), next_grad(), valid);
-    //_grad = convolveBatch(
-    //    _weights.reverse(reverse_dims),
-    //    next_grad(), full);
+    gradWeights();
+    gradLoss();
 }
 
 void ConvolLayer::fwd(TensorWrapper<float>&&){}
 void ConvolLayer::bwd(TensorWrapper<float>&&){}
+
+
+inline const std::array<Index, 1> sum_dims {2};
+void ConvolLayer::gradWeights(){
+    Index batch_size {_out_batch_shape.back()};
+    Index depth {_shape.back()};
+    Index in_depth {_shape.back()};
+    Tensor<float, 4> act = prev_act();
+    Tensor<float, 4> grad = next_grad();
+
+    std::array<Index, 3> offsets;
+    std::array<Index, 3> extents{
+        grad.dimension(0),
+        grad.dimension(1),
+        in_depth
+    };
+
+    for(Index i{0}; i < batch_size; i++){
+        for(Index k{0}; k < depth; k++){
+            offsets = {0, 0, in_depth*k};
+            _nabla_w.chip(k, 2) += convolveEach(
+                act.chip(i, 3),
+                grad.chip(i, 3)
+                .slice(offsets, extents)
+            ).sum(sum_dims);
+        }
+    }
+}
+
+inline const std::array<bool, 3> flip_dims {true, true};
+void ConvolLayer::gradLoss(){
+    Index batch_size {_out_batch_shape.back()};
+    Index depth {_shape.back()};
+    Index in_depth {_shape.back()};
+    Tensor<float, 4> grad  = next_grad();
+
+    int kr {static_cast<int>(grad.dimension(0))};
+    int kc {static_cast<int>(grad.dimension(1))};
+    Eigen::array<std::pair<int, int>, 3> paddings;
+    paddings = {std::make_pair(kr-1, kr-1), 
+                std::make_pair(kc-1, kc-1),
+                std::make_pair(0, 0)};
+    Tensor<float, 3> rot_w = 
+        _weights.reverse(flip_dims)
+        .pad(paddings);
+
+    std::array<Index, 3> offsets;
+    std::array<Index, 3> extents{
+        grad.dimension(0),
+        grad.dimension(1),
+        in_depth
+    };
+    for(Index i{0}; i < batch_size; i++){
+        for(Index k{0}; k < depth; k++){
+            offsets = {0, 0, in_depth*k};
+            _grad.chip(i, 3) +=
+                convolveKernels(
+                    _weights.chip(k, 2),
+                    grad.chip(i, 3)
+                    .slice(offsets, extents)
+                );
+        }
+    }
+}

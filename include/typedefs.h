@@ -6,6 +6,7 @@
 using Eigen::Index;
 using Eigen::Tensor;
 using Eigen::TensorMap;
+using Eigen::TensorRef;
 
 using byte = unsigned char;
 
