@@ -15,7 +15,6 @@
 #include "pngTests.h"
 
 int main(){
-#if 0
     std::cout << "--TESTING PNG" << "\n";
     testPNG();
 
@@ -23,10 +22,9 @@ int main(){
     testSequentialInit();
     std::cout << "--TESTING Feed-forward" << "\n";
     testFeedFwd();
-#endif
     std::cout << "--TESTING Backwards-propagation" << "\n";
     testBackProp();
-#if 0
+
     std::cout << "--TESTING Mnist Data" << "\n";
     std::string dataDir {"../data/mnist_csv/"};
     //#std::vector<Vector<float, Dynamic>*> x;
@@ -48,8 +46,10 @@ int main(){
     //ConvolLayer c(std::array<Index, 3> {2, 2, 30});
     // network architecture
     Sequential2 model({
-        new SigmoidLayer(30), 
-        new ReshapeLayer<1, 1>(std::array<Index, 1>{30}),
+        new ReshapeLayer<1, 3>(std::array<Index, 3>{28, 28, 1}),
+        new ConvolLayer(std::array<Index, 3>{16, 16, 2}),
+        new ReshapeLayer<3, 1>(std::array<Index, 1>{338}),
+        new SigmoidLayer(338),
         new SigmoidLayer(10),
         }
         , new MSE(), 
@@ -66,5 +66,4 @@ int main(){
     std::cout << std::setprecision(2);
     std::cout << "Final accuracy "  << model.accuracy(val_x, val_y)*100;
     std::cout << "%" << "\n\n";
-#endif
 }

@@ -191,6 +191,12 @@ void ConvolLayer::init(Index batch_size){
     _out_batch_shape.back() = batch_size;
     _in_batch_shape.back() = batch_size;
     _grad = in_t(_in_batch_shape);
+
+    std::array<Index, 2> shape_nabla_b{
+        _shape[2], batch_size
+    };
+    _nabla_b = nabla_b_t(shape_nabla_b); 
+    _nabla_b.setConstant(0);
 }
 
 void ConvolLayer::initParams(){
@@ -217,7 +223,7 @@ inline const std::array<Index, 1> sum_dims {2};
 void ConvolLayer::gradWeights(){
     Index batch_size {_out_batch_shape.back()};
     Index depth {_shape.back()};
-    Index in_depth {_shape.back()};
+    Index in_depth {_in_shape.back()};
     Tensor<float, 4> act = prev_act();
     Tensor<float, 4> grad = next_grad();
 
@@ -227,7 +233,6 @@ void ConvolLayer::gradWeights(){
         grad.dimension(1),
         in_depth
     };
-
     for(Index i{0}; i < batch_size; i++){
         for(Index k{0}; k < depth; k++){
             offsets = {0, 0, in_depth*k};
@@ -244,7 +249,7 @@ inline const std::array<bool, 3> flip_dims {true, true};
 void ConvolLayer::gradLoss(){
     Index batch_size {_out_batch_shape.back()};
     Index depth {_shape.back()};
-    Index in_depth {_shape.back()};
+    Index in_depth {_in_shape.back()};
     Tensor<float, 4> grad  = next_grad();
 
     int kr {static_cast<int>(grad.dimension(0))};
@@ -268,7 +273,7 @@ void ConvolLayer::gradLoss(){
             offsets = {0, 0, in_depth*k};
             _grad.chip(i, 3) +=
                 convolveKernels(
-                    _weights.chip(k, 2),
+                    rot_w.chip(k, 2),
                     grad.chip(i, 3)
                     .slice(offsets, extents)
                 );

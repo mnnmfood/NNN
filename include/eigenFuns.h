@@ -341,11 +341,10 @@ inline Tensor<float, 3> convolveEach(Tensor<float, 3>&& src, Tensor<float, 3>&& 
 }
 
 inline Tensor<float, 3> convolveKernels(Tensor<float, 2>&& src, Tensor<float, 3>&& kernels){
-    Index depth = src.dimension(2);
-
+    Index depth = kernels.dimension(2);
     Tensor<float, 3> temp (
-        src.dimension(0) + kernels.dimension(0) - 1,
-        src.dimension(1) + kernels.dimension(1) - 1,
+        src.dimension(0) - kernels.dimension(0) + 1,
+        src.dimension(1) - kernels.dimension(1) + 1,
         depth);
     for(Index i{0}; i < depth; i++){
         temp.chip(i, 2) = src.convolve(kernels.chip(i, 2), convolve_dims);
