@@ -122,7 +122,7 @@ void testConvolve(){
     model.fwdProp(x);
     Tensor<float, 4> result = model.output(batch_size);
 
-    for(int i{0}; i < batch_size; i++){
+    for(size_t i{0}; i < batch_size; i++){
         Tensor<float, 2> image = result.chip(i, 3).chip(0, 2);
         Tensor<byte, 2> image_norm = 
             image.unaryExpr(max_normalize_op(result, 255)).cast<byte>();

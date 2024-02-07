@@ -210,47 +210,17 @@ void ConvolLayer::fwd(){
     _act = convolveBatch(prev_act(), _weights, valid);
 }
 
-void ConvolLayer::bwd(){
-    gradWeights();
-    gradLoss();
-}
-
 void ConvolLayer::fwd(TensorWrapper<float>&&){}
 void ConvolLayer::bwd(TensorWrapper<float>&&){}
 
-
 inline const std::array<Index, 1> sum_dims {2};
-void ConvolLayer::gradWeights(){
+inline const std::array<bool, 3> flip_dims {false, true, true};
+void ConvolLayer::bwd(){
     Index batch_size {_out_batch_shape.back()};
     Index depth {_shape.back()};
     Index in_depth {_in_shape.back()};
     Tensor<float, 4> act = prev_act();
     Tensor<float, 4> grad = next_grad();
-
-    std::array<Index, 3> offsets;
-    std::array<Index, 3> extents{
-        grad.dimension(0),
-        grad.dimension(1),
-        in_depth
-    };
-    for(Index i{0}; i < batch_size; i++){
-        for(Index k{0}; k < depth; k++){
-            offsets = {0, 0, in_depth*k};
-            _nabla_w.chip(k, 2) += convolveEach(
-                act.chip(i, 3),
-                grad.chip(i, 3)
-                .slice(offsets, extents)
-            ).sum(sum_dims);
-        }
-    }
-}
-
-inline const std::array<bool, 3> flip_dims {true, true};
-void ConvolLayer::gradLoss(){
-    Index batch_size {_out_batch_shape.back()};
-    Index depth {_shape.back()};
-    Index in_depth {_in_shape.back()};
-    Tensor<float, 4> grad  = next_grad();
 
     int kr {static_cast<int>(grad.dimension(0))};
     int kc {static_cast<int>(grad.dimension(1))};
@@ -268,9 +238,16 @@ void ConvolLayer::gradLoss(){
         grad.dimension(1),
         in_depth
     };
+
+    // For each sample and each kernel
     for(Index i{0}; i < batch_size; i++){
         for(Index k{0}; k < depth; k++){
             offsets = {0, 0, in_depth*k};
+            _nabla_w.chip(k, 2) += convolveEach(
+                act.chip(i, 3),
+                grad.chip(i, 3)
+                .slice(offsets, extents)
+            ).sum(sum_dims);
             _grad.chip(i, 3) +=
                 convolveKernels(
                     rot_w.chip(k, 2),

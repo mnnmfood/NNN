@@ -285,11 +285,6 @@ convolveKernels(Tensor<float, 3>&& src, Tensor<float, 3>& kernels, ConvolTypes t
 
 inline Tensor<float, 4> 
 convolveBatch(Tensor<float, 4>& src, Tensor<float, 3>& kernels, ConvolTypes type){
-    std::array<Index, 4> extents1 ({
-        src.dimension(0), 
-        src.dimension(1), 1, 1});
-    std::array<Index, 4> offsets1;
-
     int sig;
     if(type == valid){
         sig = 1;
@@ -302,9 +297,6 @@ convolveBatch(Tensor<float, 4>& src, Tensor<float, 3>& kernels, ConvolTypes type
         src.dimension(1) - sig*(kernels.dimension(1) - 1),
         src.dimension(2) * kernels.dimension(2),
         src.dimension(3));
-    std::array<Index, 4> extents2 ({temp.dimension(0), 
-                                    temp.dimension(1), 1, 1});
-    std::array<Index, 4> offsets2;
 
     for(Index i{0}; i < src.dimension(3); i++){
 

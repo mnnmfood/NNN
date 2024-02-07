@@ -268,8 +268,6 @@ class ConvolLayer:public Layer<ConvolLayer>
 {
 private:
     std::array<Index, 3> _shape;
-    void gradWeights();
-    void gradLoss();
 public:
     ConvolLayer(std::array<Index, 3>);
     void init(Index batch_size);
