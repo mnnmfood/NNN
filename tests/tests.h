@@ -43,8 +43,8 @@ void testFeedFwd(){
 
 void testBackProp(){
     Sequential2 model({
-        new ReshapeLayer<1, 3>(std::array<Index, 3>({6,6,1})),
-        new ConvolLayer(std::array<Index, 3>({3, 3, 2})),
+        new ReshapeLayer<1, 3>(std::array<Index, 3>({1, 6, 6})),
+        new ConvolLayer(std::array<Index, 3>({2, 3, 3})),
         new ReshapeLayer<3, 1>(std::array<Index, 1>({32})),
         new SigmoidLayer(32)
         }

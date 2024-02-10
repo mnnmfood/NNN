@@ -15,6 +15,7 @@
 #include "pngTests.h"
 
 int main(){
+#if 0
     std::cout << "--TESTING PNG" << "\n";
     testPNG();
 
@@ -25,6 +26,7 @@ int main(){
     std::cout << "--TESTING Backwards-propagation" << "\n";
     testBackProp();
 
+#endif
     std::cout << "--TESTING Mnist Data" << "\n";
     std::string dataDir {"../data/mnist_csv/"};
     //#std::vector<Vector<float, Dynamic>*> x;
@@ -42,14 +44,14 @@ int main(){
     Tensor<float, 2> val_y;
     load_csv(dataDir + "val_y.csv", val_y);
     std::cout << "Validation Shape y: " << val_y.dimension(0) << ", " << val_y.dimension(1)<< '\n';
-
     //ConvolLayer c(std::array<Index, 3> {2, 2, 30});
     // network architecture
     Sequential2 model({
-        new ReshapeLayer<1, 3>(std::array<Index, 3>{28, 28, 1}),
-        new ConvolLayer(std::array<Index, 3>{16, 16, 2}),
-        new ReshapeLayer<3, 1>(std::array<Index, 1>{338}),
-        new SigmoidLayer(338),
+        new ReshapeLayer<1, 3>(std::array<Index, 3>{1, 28, 28}),
+        new ConvolLayer(std::array<Index, 3>{5, 3, 3}),
+        new PoolingLayer(std::array<Index, 2>{3, 3}, 3),
+        new ReshapeLayer<3, 1>(std::array<Index, 1>{320}),
+        //new SigmoidLayer(50),
         new SigmoidLayer(10),
         }
         , new MSE(), 

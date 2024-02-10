@@ -220,20 +220,22 @@ auto sliced(const ArgType&& arg, const std::vector<int>& indices, int dim)
 }
 
 /// -- Convolutions
-inline const std::array<Index, 2> convolve_dims ({0, 1});
+inline const std::array<Index, 2> convolve_dims2d ({0, 1});
+inline const std::array<Index, 2> convolve_dims3d ({1, 2});
 
 inline Tensor<float, 3>
 convolveDepth(Tensor<float, 3>& src, Tensor<float, 2>& kernel, ConvolTypes type){
     if(type == valid){
-        return src.convolve(kernel, convolve_dims);
+        return src.convolve(kernel, convolve_dims3d);
     }else if(type == full){
-        int kr {static_cast<int>(kernel.dimension(0))};
-        int kc {static_cast<int>(kernel.dimension(1))};
+        int kr {static_cast<int>(kernel.dimension(1))};
+        int kc {static_cast<int>(kernel.dimension(2))};
         Eigen::array<std::pair<int, int>, 3> paddings;
-        paddings = {std::make_pair(kr-1, kr-1), 
-                    std::make_pair(kc-1, kc-1),
-                    std::make_pair(0, 0)};
-        return src.pad(paddings).convolve(kernel, convolve_dims);
+        paddings = {
+          std::make_pair(0, 0),
+          std::make_pair(kr-1, kr-1), 
+          std::make_pair(kc-1, kc-1)};
+        return src.pad(paddings).convolve(kernel, convolve_dims3d);
     }else{
         throw(std::runtime_error("Invalid convolution type"));
     }
@@ -247,8 +249,8 @@ convolveDepth(Tensor<float, 3>& src, Tensor<float, 2>&& kernel, ConvolTypes type
 inline Tensor<float, 3> 
 convolveKernels(Tensor<float, 3>& src, Tensor<float, 3>& kernels, ConvolTypes type){
 
-    int kr {static_cast<int>(kernels.dimension(0))};
-    int kc {static_cast<int>(kernels.dimension(1))};
+    int kr {static_cast<int>(kernels.dimension(1))};
+    int kc {static_cast<int>(kernels.dimension(2))};
 
     int sig;
     if(type == valid){
@@ -257,21 +259,21 @@ convolveKernels(Tensor<float, 3>& src, Tensor<float, 3>& kernels, ConvolTypes ty
         sig = -1;
     }
     Tensor<float, 3> temp (
-        src.dimension(0) - sig*(kr - 1),
-        src.dimension(1) - sig*(kc - 1),
-        kernels.dimension(2) * src.dimension(2)
+        kernels.dimension(0) * src.dimension(0),
+        src.dimension(1) - sig*(kr - 1),
+        src.dimension(2) - sig*(kc - 1)
     );
     std::array<Index, 3> offset;
     std::array<Index, 3> extent ({
-        temp.dimension(0),
+        1,
         temp.dimension(1),
-        1
+        temp.dimension(2)
     });
 
-    for(Index i{0}; i < kernels.dimension(2); i++){
-        offset = {0, 0, i*src.dimension(2)};
+    for(Index i{0}; i < kernels.dimension(0); i++){
+        offset = {i*src.dimension(0), 0, 0};
         temp.slice(offset, extent) = convolveDepth(
-            src, kernels.chip(i, 2), type
+            src, kernels.chip(i, 0), type
         );
     }
     return temp;
@@ -293,9 +295,9 @@ convolveBatch(Tensor<float, 4>& src, Tensor<float, 3>& kernels, ConvolTypes type
     }
 
     Tensor<float, 4> temp (
-        src.dimension(0) - sig*(kernels.dimension(0) - 1),
+        src.dimension(0) * kernels.dimension(0),
         src.dimension(1) - sig*(kernels.dimension(1) - 1),
-        src.dimension(2) * kernels.dimension(2),
+        src.dimension(2) - sig*(kernels.dimension(2) - 1),
         src.dimension(3));
 
     for(Index i{0}; i < src.dimension(3); i++){
@@ -320,26 +322,26 @@ inline Tensor<float, 4> convolveBatch(Tensor<float, 4>&& src, Tensor<float, 3>&&
 }
 
 inline Tensor<float, 3> convolveEach(Tensor<float, 3>&& src, Tensor<float, 3>&& kernels){
-    assert(src.dimension(2) == kernels.dimension(2));
-    Index depth = src.dimension(2);
+    assert(src.dimension(0) == kernels.dimension(0));
+    Index depth = src.dimension(0);
     Tensor<float, 3> temp(
-        src.dimension(0) - kernels.dimension(0) + 1,
+        depth,
         src.dimension(1) - kernels.dimension(1) + 1,
-        depth);
+        src.dimension(2) - kernels.dimension(2) + 1);
     for(Index i{0}; i < depth; i++){
-        temp.chip(i, 2) = src.chip(i, 2).convolve(kernels.chip(i, 2), convolve_dims);
+        temp.chip(i, 0) = src.chip(i, 0).convolve(kernels.chip(i, 0), convolve_dims2d);
     }
     return temp;
 }
 
 inline Tensor<float, 3> convolveKernels(Tensor<float, 2>&& src, Tensor<float, 3>&& kernels){
-    Index depth = kernels.dimension(2);
+    Index depth = kernels.dimension(0);
     Tensor<float, 3> temp (
-        src.dimension(0) - kernels.dimension(0) + 1,
-        src.dimension(1) - kernels.dimension(1) + 1,
-        depth);
+        depth,
+        src.dimension(0) - kernels.dimension(1) + 1,
+        src.dimension(1) - kernels.dimension(2) + 1);
     for(Index i{0}; i < depth; i++){
-        temp.chip(i, 2) = src.convolve(kernels.chip(i, 2), convolve_dims);
+        temp.chip(i, 0) = src.convolve(kernels.chip(i, 0), convolve_dims2d);
     }
     return temp;
 }
