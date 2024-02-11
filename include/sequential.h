@@ -125,7 +125,6 @@ public:
         int sum{0};
 
         for(Eigen::Index i{0}; i < test_size; i++){
-            //pred.col(i).maxCoeff(&y_pred);
             y_pred = pred.chip(i, num_dims_out).argmax();
             sum += (static_cast<int>(y(i)) == y_pred(0));
         }

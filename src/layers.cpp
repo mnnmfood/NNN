@@ -2,6 +2,7 @@
 #include "layers.h"
 #include <Eigen/Dense>
 #include <iostream>
+#include "utils.h"
 
 scalar_comparer_op<float> min_comparer([](float x, float y)->float {return x < y ? x: y;});
 scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y ? x: y;});
@@ -166,7 +167,6 @@ Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
         res.chip(i, 1) = z.chip(i, 1).unaryExpr(usrExp(temp_sum(i) + temp_max(i)));
     }
     return  res - res * res; 
-    //return  res - prod1(res, res); 
 }
 
 // Convolutional layer
@@ -293,17 +293,15 @@ void PoolingLayer::bwd(TensorWrapper<float>&&){}
 
 const inline std::array<Index, 1> row_max_dims ({1});
 void PoolingLayer::fwd(){
-    Tensor<float, 4> act = prev_act().abs();
+    Tensor<float, 4> act = prev_act();
     Tensor<float, 5> patches;    
     patches = act.extract_image_patches(
         _shape[0], _shape[1], _stride, _stride, 1, 1, Eigen::PADDING_VALID
     );
 
     Tensor<Index, 4> maxEachRow;
-    maxEachRow = patches.argmax(1);
-    //Tensor<float, 4> maxByRow;
-    //maxByRow = patches.maximum(row_max_dims);
-    _maxCol = patches.maximum(row_max_dims).argmax(1);
+    maxEachRow = patches.abs().argmax(1);
+    _maxCol = patches.abs().maximum(row_max_dims).argmax(1);
 
     _maxRow = Tensor<Index, 3>(_maxCol.dimensions());
     for(Index i{0}; i < patches.dimension(4); i++){
@@ -333,22 +331,22 @@ void PoolingLayer::fwd(){
 
 void PoolingLayer::bwd(){
     Tensor<float, 4> grad = next_grad();
+    Tensor<float, 4> act = prev_act().abs();
     _grad.setConstant(0);
 
     Index idx;
-    Index cols_l {grad.dimension(2)};
+    Index rows_l {grad.dimension(2)};
     Index max_row_patch, max_col_patch;
     for(Index i{0}; i < grad.dimension(3); i++){
         for(Index k{0}; k < grad.dimension(0); k++){
             for(Index l{0}; l < grad.dimension(1); l++){
                 for(Index m{0}; m < grad.dimension(2); m++){
-                    idx = l*cols_l + m;
+                    idx = m*rows_l + l;
                     max_row_patch = _maxRow(k, idx, i) + l * _stride;
                     max_col_patch = _maxCol(k, idx, i) + m * _stride;
                     _grad(k, max_row_patch,  max_col_patch, i) = grad(k, l, m, i);
                 }
             }
         }
-        //std::cout << _grad.chip(0, 3).chip(0, 0) << "\n\n";
     }
 }
