@@ -115,11 +115,11 @@ public:
     TensorShape out_shape(){
         return TensorShape(_out_shape);
     }
-    in_shape_t prev_shape(){
+    virtual in_shape_t prev_shape(){
         assert(_prev != nullptr);
         return _prev->out_shape().get<in_shape_t>();
     }
-    out_shape_t next_shape(){
+    virtual out_shape_t next_shape(){
         assert(_next != nullptr);
         return _next->in_shape().get<out_shape_t>();
     }
@@ -214,6 +214,47 @@ public:
         this->_act = this->prev_act()
             .reshape(this->_out_batch_shape);  
     }
+    void fwd(TensorWrapper<float>&& input){}
+    void bwd(){
+        this->_grad = this->next_grad()
+            .reshape(this->_in_batch_shape);  
+    };
+    void bwd(TensorWrapper<float>&& output){}
+};
+
+class FlattenLayer: public Layer<FlattenLayer>
+{
+public:
+    FlattenLayer() 
+        :Layer<FlattenLayer>{}{}
+
+    in_shape_t prev_shape() override{
+        assert(_prev != nullptr);
+        return _prev->out_shape().get();
+    }
+
+    void init(Index batch_size){
+        assert( (_next->in_shape().compatible<out_shape_t>()) && 
+            "Layer connected to FlattenLayer is not 1-dimensional");
+        this->_out_batch_shape.back() = batch_size;
+        this->_in_batch_shape.back() = batch_size;
+    }
+
+    void initParams(){
+        this->_in_shape = prev_shape();
+        this->_out_shape = this->_in_shape;
+        std::copy(this->_in_shape.begin(), this->_in_shape.end(), 
+            this->_in_batch_shape.begin());
+
+        std::copy(this->_out_shape.begin(), this->_out_shape.end(), 
+            this->_out_batch_shape.begin());
+    }
+
+    void fwd(){
+        this->_act = this->prev_act()
+            .reshape(this->_out_batch_shape);  
+    }
+
     void fwd(TensorWrapper<float>&& input){}
     void bwd(){
         this->_grad = this->next_grad()

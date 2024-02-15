@@ -42,6 +42,15 @@ template<size_t N_in, size_t N_out> struct traits<ReshapeLayer<N_in, N_out>>
     const static size_t NumDimensions {N_out};
 };
 
+class FlattenLayer;
+template<> struct traits<FlattenLayer>
+{
+    typedef std::array<Index, 1> out_shape_t;
+    typedef std::array<Index, 1> in_shape_t;
+    const static bool trainable = false;
+    const static size_t NumDimensions = 1;
+};
+
 class ConvolLayer;
 template<> struct traits<ConvolLayer>
 {

@@ -64,6 +64,19 @@ public:
         }
         return temp;
     }
+
+    std::array<Index, 1> get(){
+        std::array<Index, 1> temp ({1});
+        for(size_t i{0}; i < _size; i++){
+            temp[0] *= data[i];
+        }
+        return temp;
+    }
+
+    template<typename shape_t>
+    bool compatible(){
+        return std::tuple_size<shape_t>{} == _size;
+    }
 };
 
 
