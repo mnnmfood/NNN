@@ -54,19 +54,19 @@ template<> struct traits<FlattenLayer>
 class ConvolLayer;
 template<> struct traits<ConvolLayer>
 {
-    typedef std::array<Index, 3> out_shape_t;
-    typedef std::array<Index, 3> in_shape_t;
+    typedef std::array<Index, 4> out_shape_t;
+    typedef std::array<Index, 4> in_shape_t;
     const static bool trainable = true;
-    const static size_t NumDimensions = 3;
+    const static size_t NumDimensions = 4;
 };
 
 class  PoolingLayer;
 template<> struct traits<PoolingLayer>
 {
-    typedef std::array<Index, 3> out_shape_t;
-    typedef std::array<Index, 3> in_shape_t;
+    typedef std::array<Index, 4> out_shape_t;
+    typedef std::array<Index, 4> in_shape_t;
     const static bool trainable = false;
-    const static size_t NumDimensions = 3;
+    const static size_t NumDimensions = 4;
 };
 
 

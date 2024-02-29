@@ -8,11 +8,15 @@ enable_testing()
 option(TESTING "Create test executable" ON)
 add_subdirectory(src)
 
+
 if(TESTING)
     add_executable(tests tests/main.cpp)
     find_library(PNG_LIB_PATH libpng.a)
     find_library(Z_LIB_PATH libz.a)
+    find_path(EIGEN_LIB Eigen)
+    find_path(PNG_LIB png.h)
     cmake_print_variables(PNG_LIB_PATH)
+    cmake_print_variables(PNG_LIB)
     cmake_print_variables(Z_LIB_PATH)
     target_link_libraries(tests PUBLIC src pngwrapper "${PNG_LIB_PATH}" "${Z_LIB_PATH}")
     target_include_directories(tests PUBLIC

@@ -4,6 +4,8 @@ add_library(pngwrapper "${PNG_FILES}")
 
 find_path(EIGEN_LIB Eigen)
 find_path(PNG_LIB png.h)
+
+cmake_print_variables(PNG_LIB)
 target_include_directories(pngwrapper PUBLIC
                         "${PROJECT_BINARY_DIR}"
                         "${PROJECT_SOURCE_DIR}/include"

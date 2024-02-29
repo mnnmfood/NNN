@@ -15,7 +15,6 @@
 #include "pngTests.h"
 
 int main(){
-#if 0
     std::cout << "--TESTING PNG" << "\n";
     testPNG();
 
@@ -26,7 +25,6 @@ int main(){
     std::cout << "--TESTING Backwards-propagation" << "\n";
     testBackProp();
 
-#endif
     std::cout << "--TESTING Mnist Data" << "\n";
     std::string dataDir {"../data/mnist_csv/"};
 
