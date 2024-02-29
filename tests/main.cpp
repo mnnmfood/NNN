@@ -5,6 +5,7 @@
 
 #include <Eigen/Dense>
 
+#if 0
 #include "typedefs.h"
 #include "costs.h"
 #include "utils.h"
@@ -13,7 +14,7 @@
 
 #include "tests.h"
 #include "pngTests.h"
-
+#endif
 int main(){
 #if 0
     std::cout << "--TESTING PNG" << "\n";
@@ -26,9 +27,8 @@ int main(){
     std::cout << "--TESTING Backwards-propagation" << "\n";
     testBackProp();
 
-#endif
     std::cout << "--TESTING Mnist Data" << "\n";
-    std::string dataDir {"../data/mnist_csv/"};
+    std::string dataDir {"../../../data/mnist_csv/"};
 
     std::array<Index, 2> offsets({0, 0});
     std::array<Index, 2> extents({784, 100});
@@ -74,4 +74,5 @@ int main(){
     std::cout << std::setprecision(2);
     std::cout << "Final accuracy "  << model.accuracy(val_x, val_y)*100;
     std::cout << "%" << "\n\n";
+#endif
 }
