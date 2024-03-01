@@ -138,7 +138,7 @@ Tensor<float, 2> TanhLayer::grad_act(const Tensor<float, 2>& z){
 
 // SoftMax Layer
 Tensor<float, 2> SoftMaxLayer::act(const Tensor<float, 2>& z){
-    Tensor<float, 2> temp_max = z.reduce(dims_colwise, max_comparer);
+    Tensor<float, 1> temp_max = z.reduce(dims_colwise, max_comparer);
     Tensor<float, 2> temp_exp{z.dimension(0), z.dimension(1)};
 
     for(int i{0}; i < z.dimension(1); i++){
@@ -154,7 +154,7 @@ Tensor<float, 2> SoftMaxLayer::act(const Tensor<float, 2>& z){
 }
 
 Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
-    Tensor<float, 2> temp_max = z.reduce(dims_colwise, max_comparer);
+    Tensor<float, 1> temp_max = z.reduce(dims_colwise, max_comparer);
     Tensor<float, 2> temp_exp{z.dimension(0), z.dimension(1)};
 
     for(int i{0}; i < z.dimension(1); i++){

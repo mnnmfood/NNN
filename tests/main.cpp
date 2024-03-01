@@ -5,7 +5,6 @@
 
 #include <Eigen/Dense>
 
-#if 0
 #include "typedefs.h"
 #include "costs.h"
 #include "utils.h"
@@ -14,10 +13,10 @@
 
 #include "tests.h"
 #include "pngTests.h"
-#endif
+
 int main(){
-#if 0
-    std::cout << "--TESTING PNG" << "\n";
+#if 1
+    std::cout << " --TESTING PNG" << "\n";
     testPNG();
 
     std::cout << "--TESTING INIT" << "\n";
