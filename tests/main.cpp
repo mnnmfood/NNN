@@ -15,7 +15,8 @@
 #include "pngTests.h"
 
 int main(){
-    std::cout << "--TESTING PNG" << "\n";
+#if 1
+    std::cout << " --TESTING PNG" << "\n";
     testPNG();
 
     std::cout << "--TESTING INIT" << "\n";
@@ -26,7 +27,7 @@ int main(){
     testBackProp();
 
     std::cout << "--TESTING Mnist Data" << "\n";
-    std::string dataDir {"../data/mnist_csv/"};
+    std::string dataDir {"../../../data/mnist_csv/"};
 
     std::array<Index, 2> offsets({0, 0});
     std::array<Index, 2> extents({784, 100});
@@ -72,4 +73,5 @@ int main(){
     std::cout << std::setprecision(2);
     std::cout << "Final accuracy "  << model.accuracy(val_x, val_y)*100;
     std::cout << "%" << "\n\n";
+#endif
 }

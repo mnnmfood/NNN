@@ -2,7 +2,7 @@
 #include "pngWrapper.h"
 #include "layers.h"
 
-inline const std::string data_dir {"../data/"};
+inline const std::string data_dir {"../../../data/"};
 inline const std::string out_dir {"./"};
 
 void testColor()
@@ -105,7 +105,7 @@ void testBulk()
 
 void testConvolve(){
     std::cout << "-- Test Convolution" << "\n";
-    std::string dataDir {"../data/mnist_csv/"};
+    std::string dataDir {data_dir + "mnist_csv/"};
     Tensor<float, 2> data;
     load_csv(dataDir + "train_x.csv", data);
     Tensor<float, 2> x;
