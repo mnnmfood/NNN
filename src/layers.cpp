@@ -1,8 +1,9 @@
 
-#include "layers.h"
 #include <Eigen/Dense>
 #include <iostream>
+#include "layers.h"
 #include "utils.h"
+#include "convolutions.h"
 
 scalar_comparer_op<float> min_comparer([](float x, float y)->float {return x < y ? x: y;});
 scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y ? x: y;});
@@ -95,6 +96,7 @@ void FCLayer::fwd(){
     assert(_prev != nullptr);
     _winputs = vecSum(_weights.contract(prev_act(), 
         product_dims), _biases, false);
+    Tensor<float, 2> temp = act(_winputs);
     _act = act(_winputs);
 }
 
@@ -109,6 +111,10 @@ void FCLayer::bwd(TensorWrapper<float>&& cost_grad){
 void FCLayer::bwd(){
     assert(_next != nullptr);
     _nabla_b = next_grad() * grad_act(_winputs);
+    Tensor<float, 2> temp = transposed(prev_act());
+    Tensor<float, 2> temp2 = _nabla_b.contract(
+        temp, product_dims
+    );
     _nabla_w = _nabla_b.contract(
         transposed(prev_act()), product_dims);
 
@@ -174,12 +180,28 @@ Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
 ConvolLayer::ConvolLayer(std::array<Index, 3> shape)
     :Layer{}, _shape{shape}
 {
+    std::array<Index, 4> channels_shape;
+    // [depth, channels, rows, columns]
+    channels_shape[0] = shape[0];
+    channels_shape[1] = 1;
+    channels_shape[2] = shape[1];
+    channels_shape[3] = shape[2];
     NormalSample sampleFun(0.0f, 1.0f / std::sqrt(
         static_cast<float>(shape[1] * shape[2])
     ));
-    _weights = weight_t(shape).unaryExpr(std::ref(sampleFun));
-    _nabla_w = nabla_weight_t(shape);
+    _weights = weight_t(channels_shape).unaryExpr(std::ref(sampleFun));
+    _nabla_w = nabla_weight_t(channels_shape);
     _biases = bias_t(shape[0]).unaryExpr(std::ref(sampleFun));
+}
+
+void ConvolLayer::initParams(){
+    _in_shape = prev_shape();
+    _out_shape = {
+        1,
+        _in_shape[1] - _weights.dimension(2) + 1,
+        _in_shape[2] - _weights.dimension(3) + 1,
+        _in_shape[3] * _weights.dimension(0)
+    }; 
 }
 
 void ConvolLayer::init(Index batch_size){
@@ -199,70 +221,67 @@ void ConvolLayer::init(Index batch_size){
     _nabla_b.setConstant(0);
 }
 
-void ConvolLayer::initParams(){
-    _in_shape = prev_shape();
-    _out_shape = {
-        _in_shape[0] * _weights.dimension(0),
-        _in_shape[1] - _weights.dimension(1) + 1,
-        _in_shape[2] - _weights.dimension(2) + 1}; 
-}
-
 void ConvolLayer::fwd(){
-    _act = convolveBatch(prev_act(), _weights, valid);
+    Tensor<float, 5> temp = prev_act();
+    //_act = convolveBatch(prev_act(), _weights);
+    _act = convolveBatch(temp, _weights);
 }
 
 void ConvolLayer::fwd(TensorWrapper<float>&&){}
 void ConvolLayer::bwd(TensorWrapper<float>&&){}
 
-inline const std::array<Index, 1> sum_dims {0};
-inline const std::array<bool, 3> flip_dims {false, true, true};
-void ConvolLayer::bwd(){
+void ConvolLayer::bwd() {
+
     Index batch_size {_out_batch_shape.back()};
     Index depth {_shape[0]};
-    Index in_depth {_in_shape[0]};
-    Tensor<float, 4> act = prev_act();
-    Tensor<float, 4> grad = next_grad();
+    Index in_depth {_in_shape[3]};
+    Index im_rows{ _in_shape[1] };
+    Index im_cols{ _in_shape[2] };
+    Index ker_rows{ _shape[1] };
+    Index ker_cols{ _shape[2] };
 
-    int kr {static_cast<int>(grad.dimension(1))};
-    int kc {static_cast<int>(grad.dimension(2))};
-    Eigen::array<std::pair<int, int>, 3> paddings;
-    paddings = {
-        std::make_pair(0, 0),
-        std::make_pair(kr-1, kr-1), 
-        std::make_pair(kc-1, kc-1)};
-    Tensor<float, 3> rot_w = 
-        _weights.reverse(flip_dims)
-        .pad(paddings);
-
-    std::array<Index, 3> offsets;
-    std::array<Index, 3> extents{
-        in_depth,
-        grad.dimension(1),
-        grad.dimension(2)
+    Eigen::DSizes<Index, 5> offsets_output{ 0, 0, 0, 0, 0 };
+    Eigen::DSizes<Index, 5> extents_output{
+        _out_batch_shape[0],
+        _out_batch_shape[1],
+        _out_batch_shape[2],
+        depth,
+        _out_batch_shape[4],
     };
+    auto grad = next_grad();
+    auto act = prev_act();
 
-    // For each sample and each kernel
-    for(Index i{0}; i < batch_size; i++){
-        for(Index k{0}; k < depth; k++){
-            offsets = {in_depth*k, 0, 0};
-            _nabla_w.chip(k, 0) += convolveEach(
-                act.chip(i, 3),
-                grad.chip(i, 3)
-                .slice(offsets, extents)
-            ).sum(sum_dims);
-            _grad.chip(i, 3) +=
-                convolveKernels(
-                    rot_w.chip(k, 0),
-                    grad.chip(i, 3)
-                    .slice(offsets, extents)
-                );
-        }
+    for (Index k{ 0 }; k < in_depth; k++) {
+        offsets_output[3] = k * depth;
+        //_grad.chip(k, 3).device(device) = backwardsConvolveInput(
+        _grad.chip(k, 3) = backwardsConvolveInput(
+            grad.slice(offsets_output, extents_output),
+            _weights, im_rows, im_cols);
+        //result2.device(device) += backwardsConvolveKernel(
+        _nabla_w += backwardsConvolveKernel(
+            act.chip(k, 3),
+            grad.slice(offsets_output, extents_output),
+            ker_rows, ker_cols);
+
     }
 }
 
+#if 1
 PoolingLayer::PoolingLayer(std::array<Index, 2> shape, Index stride)
     :Layer{}, _shape{shape}, _stride{stride}
 {
+}
+
+void PoolingLayer::initParams(){
+    _in_shape = prev_shape();
+    _out_shape = {
+        1,
+        static_cast<Index>(ceil( 
+            (static_cast<float>(_in_shape[1] - _shape[0] + 1)) / _stride)),
+        static_cast<Index>(ceil( 
+            (static_cast<float>(_in_shape[2] - _shape[1] + 1)) / _stride)),
+        _in_shape[0]
+    };
 }
 
 void PoolingLayer::init(Index batch_size){
@@ -270,44 +289,32 @@ void PoolingLayer::init(Index batch_size){
         _in_batch_shape.begin());
     std::copy(_out_shape.begin(), _out_shape.end(), 
         _out_batch_shape.begin());
-
     _out_batch_shape.back() = batch_size;
     _in_batch_shape.back() = batch_size;
     _grad = in_t(_in_batch_shape);
     _act = out_t(_out_batch_shape);
 }
-
-void PoolingLayer::initParams(){
-    _in_shape = prev_shape();
-    _out_shape = {
-        _in_shape[0],
-        static_cast<Index>(ceil( 
-            (static_cast<float>(_in_shape[1] - _shape[0] + 1)) / _stride)),
-        static_cast<Index>(ceil( 
-            (static_cast<float>(_in_shape[2] - _shape[1] + 1)) / _stride)),
-    };
-}
-
 void PoolingLayer::fwd(TensorWrapper<float>&&){}
 void PoolingLayer::bwd(TensorWrapper<float>&&){}
 
-const inline std::array<Index, 1> row_max_dims ({1});
 void PoolingLayer::fwd(){
-    Tensor<float, 4> act = prev_act();
-    Tensor<float, 5> patches;    
-    patches = act.extract_image_patches(
+    //auto act = prev_act();
+    Tensor<float, 6> patches;    
+    patches = prev_act().extract_image_patches(
         _shape[0], _shape[1], _stride, _stride, 1, 1, Eigen::PADDING_VALID
     );
 
-    Tensor<Index, 4> maxEachRow;
+    Tensor<Index, 5> maxEachRow;
     maxEachRow = patches.abs().argmax(1);
+    const std::array<Index, 1> row_max_dims ({1});
     _maxCol = patches.abs().maximum(row_max_dims).argmax(1);
 
-    _maxRow = Tensor<Index, 3>(_maxCol.dimensions());
-    for(Index i{0}; i < patches.dimension(4); i++){
-        for(Index k{0}; k < patches.dimension(0); k++){
+    _maxRow = Tensor<Index, 4>(_maxCol.dimensions());
+    for(Index i{0}; i < patches.dimension(5); i++){
+        for(Index k{0}; k < patches.dimension(4); k++){
             for(Index l{0}; l < patches.dimension(3); l++){
-                _maxRow(k, l, i) = maxEachRow(k, _maxCol(k, l, i), l, i);
+                //_maxRow(k, l, i) = maxEachRow(k, _maxCol(k, l, i), l, i);
+                _maxRow(0, l, k, i) = maxEachRow(0, _maxCol(0, l, k, i), l, k, i);
             }
         }
     }
@@ -315,38 +322,44 @@ void PoolingLayer::fwd(){
     Index row_l{0}, col_l{0};
     Index cols {_act.dimension(2)};
     Index max_row_patch, max_col_patch;
-    for(Index i{0}; i < patches.dimension(4); i++){
-        for(Index k{0}; k < patches.dimension(0); k++){
+    for(Index i{0}; i < patches.dimension(5); i++){
+        for(Index k{0}; k < patches.dimension(4); k++){
             for(Index l{0}; l < patches.dimension(3); l++){
                 row_l = l % cols; 
                 col_l = l / cols;
-                max_col_patch = _maxCol(k, l, i);
-                max_row_patch = _maxRow(k, l, i);
-                _act(k, row_l, col_l, i) = 
-                    patches(k, max_row_patch, max_col_patch, l, i);
+                max_col_patch = _maxCol(0, l, k, i);
+                max_row_patch = _maxRow(0, l, k, i);
+                _act(0, row_l, col_l, k, i) = 
+                    patches(0, max_row_patch, max_col_patch, l, k, i);
+                //_act(k, row_l, col_l, i) = 
+                //    patches(k, max_row_patch, max_col_patch, l, i);
             }
         }
     }
 }
 
 void PoolingLayer::bwd(){
-    Tensor<float, 4> grad = next_grad();
-    Tensor<float, 4> act = prev_act().abs();
+#if 1
+    Tensor<float, 5> grad = next_grad();
+    Tensor<float, 5> act = prev_act().abs();
     _grad.setConstant(0);
 
     Index idx;
     Index rows_l {grad.dimension(2)};
     Index max_row_patch, max_col_patch;
-    for(Index i{0}; i < grad.dimension(3); i++){
-        for(Index k{0}; k < grad.dimension(0); k++){
+    for(Index i{0}; i < grad.dimension(4); i++){
+        for(Index k{0}; k < grad.dimension(3); k++){
             for(Index l{0}; l < grad.dimension(1); l++){
                 for(Index m{0}; m < grad.dimension(2); m++){
                     idx = m*rows_l + l;
-                    max_row_patch = _maxRow(k, idx, i) + l * _stride;
-                    max_col_patch = _maxCol(k, idx, i) + m * _stride;
-                    _grad(k, max_row_patch,  max_col_patch, i) = grad(k, l, m, i);
+                    max_row_patch = _maxRow(0, idx, k, i) + l * _stride;
+                    max_col_patch = _maxCol(0, idx, k, i) + m * _stride;
+                    //_grad(k, max_row_patch,  max_col_patch, i) = grad(k, l, m, i);
+                    _grad(0, max_row_patch,  max_col_patch, k, i) = grad(0, l, m, k, i);
                 }
             }
         }
     }
+#endif
 }
+#endif

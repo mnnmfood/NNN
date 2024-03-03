@@ -284,7 +284,7 @@ convolveKernels(Tensor<float, 3>&& src, Tensor<float, 3>& kernels, ConvolTypes t
     return convolveKernels(src, kernels, type);
 }
 
-
+#if 0
 inline Tensor<float, 4> 
 convolveBatch(Tensor<float, 4>& src, Tensor<float, 3>& kernels, ConvolTypes type){
     int sig;
@@ -320,6 +320,7 @@ inline Tensor<float, 4> convolveBatch(Tensor<float, 4>&& src, Tensor<float, 3>&&
                                     ConvolTypes type){
   return convolveBatch(src, kernels, type);
 }
+#endif
 
 inline Tensor<float, 3> convolveEach(Tensor<float, 3>&& src, Tensor<float, 3>&& kernels){
     assert(src.dimension(0) == kernels.dimension(0));

@@ -325,8 +325,8 @@ class PoolingLayer:public Layer<PoolingLayer>
 private:
     std::array<Index, 2> _shape;
     Index _stride;
-    Tensor<Index, 3> _maxRow;
-    Tensor<Index, 3> _maxCol;
+    Tensor<Index, 4> _maxRow;
+    Tensor<Index, 4> _maxCol;
 public:
     PoolingLayer(std::array<Index, 2>, Index);
     void init(Index batch_size);

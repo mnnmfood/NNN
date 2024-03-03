@@ -43,14 +43,15 @@ void testFeedFwd(){
 
 void testBackProp(){
     Sequential2 model({
-        new ReshapeLayer<1, 3>(std::array<Index, 3>({1, 6, 6})),
+        new ReshapeLayer<1, 4>(std::array<Index, 4>({1, 6, 6, 1})),
         new ConvolLayer(std::array<Index, 3>({2, 3, 3})),
-        new ReshapeLayer<3, 1>(std::array<Index, 1>({32})),
-        new SigmoidLayer(32)
+        new PoolingLayer(std::array<Index, 2>({2, 2}), 1),
+        new FlattenLayer(),
+        new SigmoidLayer(8)
         }
         , new MSE(),
         std::array<Index, 1>{36},
-        std::array<Index, 1>{32});
+        std::array<Index, 1>{8});
 
     int n_samples {2};
 
@@ -63,9 +64,9 @@ void testBackProp(){
 
     model.init(n_samples);
     model.fwdProp(x);
-
-    Eigen::Tensor<float, 1> yi(32); 
-    Eigen::Tensor<float, 2> y(32, n_samples);
+    
+    Eigen::Tensor<float, 1> yi(8); 
+    Eigen::Tensor<float, 2> y(8, n_samples);
     for(int i{0}; i < n_samples; i++){
         y.setConstant(i);
         y.chip(i, 1) = yi;

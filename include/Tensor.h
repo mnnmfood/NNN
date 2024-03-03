@@ -20,7 +20,7 @@ class TensorWrapper
         return _size == total_size;
     }
 public:
-    T* data = nullptr;
+    const T* data = nullptr;
     size_t _size;
 
     template<int NumDimensions>
@@ -34,16 +34,16 @@ public:
     template<size_t NumDimensions>
     auto get(const std::array<Index, NumDimensions>& size){
         assert(checkSize(size));
-        return Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>>(data, size);
+        return Eigen::TensorMap<Eigen::Tensor<const T, NumDimensions>>(data, size);
     }
     template<size_t NumDimensions>
     auto get(std::array<Index, NumDimensions>& size){
         assert(checkSize(size) && ("Tensor size is not compatible"));
-        return Eigen::TensorMap<Eigen::Tensor<T, NumDimensions>>(data, size);
+        return Eigen::TensorMap<Eigen::Tensor<const T, NumDimensions>>(data, size);
     }
 
     auto get(){
-        return Eigen::TensorMap<Eigen::Tensor<T, 1>>(data, _size);
+        return Eigen::TensorMap<Eigen::Tensor<const T, 1>> (data, _size);
     }
 };
 
