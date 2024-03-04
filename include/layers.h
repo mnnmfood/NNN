@@ -24,6 +24,7 @@ public:
     BaseLayer* next();
     BaseLayer* prev();
     BaseLayer(size_t, size_t);
+    std::string_view which();
 
     virtual void fwd(ThreadPoolDevice* device=nullptr) = 0;
     virtual void fwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr) = 0;
@@ -60,7 +61,6 @@ protected:
     using bias_t = Tensor<float, 1>;
     using nabla_weight_t = Tensor<float, traits<Derived>::NumDimensions>;
     using nabla_b_t = Tensor<float, 2>;
-
     bool _trainable = traits<Derived>::trainable;
     out_t _act;
     in_t _grad;
@@ -73,20 +73,23 @@ protected:
     in_shape_t _in_shape;
     out_batch_shape_t _out_batch_shape;
     in_batch_shape_t _in_batch_shape;
+    std::string test = "test";
 
 public:
     Layer(): 
-    BaseLayer {std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{}}
-    {}
+        BaseLayer{ std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{} }
+    {
+        std::cout << test;
+    }
     Layer(out_shape_t out_shape)
-        :BaseLayer {std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{}},
+        :BaseLayer{ std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{}},
         _out_shape{out_shape}
     {
         std::copy(_out_shape.begin(), _out_shape.end(), 
             _out_batch_shape.begin());
     }    
     Layer(out_shape_t out_shape, in_shape_t in_shape)
-        :BaseLayer {std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{}}, 
+        :BaseLayer{ std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{} },
         _out_shape{out_shape}, _in_shape{in_shape}
     {
         std::copy(_out_shape.begin(), _out_shape.end(), 

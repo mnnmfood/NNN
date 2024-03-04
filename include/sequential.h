@@ -6,6 +6,8 @@
 #include "typedefs.h"
 #include "layers.h"
 #include "costs.h"
+#include "timer.h"
+#include "timer.h"
 
 template<size_t num_dims_in, size_t num_dims_out>
 class Sequential2
@@ -64,17 +66,40 @@ public:
             _device
         );
         layer = layer->prev();
+
+        int i = 0;
+        std::cout << "Backwards: \n";
+        Timer timer;
+
         while(layer){
+            std::cout << "layer " << i << ": ";
+            timer.start();
             layer->bwd(_device);
+            timer.stop();
+            std::cout << timer.elapsedMilliseconds() << "\n";
+            i++;
+
             layer = layer->prev();
         }
     }
     void fwdProp(Tensor<float, 2>& input){
+
         BaseLayer* layer = _layers.front();
         layer->fwd(TensorWrapper(input), _device);
         layer = layer->next();
+
+        int i = 0;
+        std::cout << "Forwards: \n";
+        Timer timer;
+
         while(layer){
+            std::cout << "layer " << i << ": ";
+            timer.start();
             layer->fwd(_device);
+            timer.stop();
+            std::cout << timer.elapsedMilliseconds() << "\n";
+            i++;
+
             layer = layer->next();
         }
     }
@@ -86,7 +111,8 @@ public:
             int epochs, int batch_size, float lr, float mu,
             Tensor<float, num_dims_in+1>& val_x,
             Tensor<float, 2>&val_y){
-
+        
+        Timer timer;
         size_t train_size = x.dimension(num_dims_in);
 
         // Prepare random indices 
@@ -96,7 +122,7 @@ public:
 
         for(int k{0}; k < epochs; k++){
             init(batch_size);
-            auto start = std::chrono::high_resolution_clock::now();
+            timer.start();
             std::shuffle(indices.begin(), indices.end(), gen);
 
             for(size_t l{0}; l < train_size-batch_size; l+=batch_size){
@@ -114,10 +140,8 @@ public:
             float cost_t = accuracy(val_x, val_y);
             std::cout << "Epoch " << k << " :" << cost_t*100; 
             std::cout << " %" << "\n";
-            auto finish = std::chrono::high_resolution_clock::now();
-            std::cout << "Time: " << 
-                std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count() 
-                << "ms\n";
+            timer.stop();
+            std::cout << "Time: " << timer.elapsedMilliseconds() << "ms\n";
         }
     }
 

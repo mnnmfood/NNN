@@ -53,7 +53,7 @@ int main(){
     // network architecture
     Sequential2 model({
         new ReshapeLayer<1, 4>(std::array<Index, 4>{1, 28, 28, 1}),
-        new ConvolLayer(std::array<Index, 3>{32, 3, 3}),
+        new ConvolLayer(std::array<Index, 3>{2, 3, 3}),
         new PoolingLayer(std::array<Index, 2>{2, 2}, 2),
         new FlattenLayer(),
         new SigmoidLayer(100),
