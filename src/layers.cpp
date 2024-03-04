@@ -57,12 +57,12 @@ public:
 };
 
  // Generic Layer
-BaseLayer::BaseLayer(size_t out_dims, size_t in_dims)
-    :_out_num_dims{ out_dims }, _in_num_dims{ in_dims }
+BaseLayer::BaseLayer(size_t out_dims, size_t in_dims, std::string_view d)
+    :_out_num_dims{ out_dims }, _in_num_dims{ in_dims }, _descriptor{d}
 {}
 BaseLayer* BaseLayer::next(){return _next;}
 BaseLayer* BaseLayer::prev(){return _prev;}
-
+std::string BaseLayer::which() { return _descriptor; }
 // Fully connected layer
 FCLayer::FCLayer(Index size) 
     :Layer{std::array<Index, 1>{size}}, _shape{size}
@@ -224,10 +224,7 @@ void ConvolLayer::init(Index batch_size){
 }
 
 void ConvolLayer::fwd(ThreadPoolDevice* device){
-    Tensor<float, 5> temp = prev_act();
-    //_act = convolveBatch(prev_act(), _weights);
-    //_act = convolveBatch(temp, _weights);
-    _act.device(*device) = convolveBatch(temp, _weights);
+    _act.device(*device) = convolveBatch(prev_act(), _weights);
 }
 
 void ConvolLayer::fwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
@@ -251,19 +248,15 @@ void ConvolLayer::bwd(ThreadPoolDevice* device) {
         depth,
         _out_batch_shape[4],
     };
-    auto grad = next_grad();
-    auto act = prev_act();
 
     for (Index k{ 0 }; k < in_depth; k++) {
         offsets_output[3] = k * depth;
-        //_grad.chip(k, 3) = backwardsConvolveInput(
         _grad.chip(k, 3).device(*device) = backwardsConvolveInput(
-            grad.slice(offsets_output, extents_output),
+            next_grad().slice(offsets_output, extents_output),
             _weights, im_rows, im_cols);
-        //_nabla_w += backwardsConvolveKernel(
         _nabla_w.device(*device) += backwardsConvolveKernel(
-            act.chip(k, 3),
-            grad.slice(offsets_output, extents_output),
+            prev_act().chip(k, 3),
+            next_grad().slice(offsets_output, extents_output),
             ker_rows, ker_cols);
     }
 }

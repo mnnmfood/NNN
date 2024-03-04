@@ -2,6 +2,7 @@
 #define LAYERS_H
 
 #include<random>
+#include <string_view>
 #include "Tensor.h"
 #include "typedefs.h"
 #include "eigenFuns.h"
@@ -20,11 +21,12 @@ public:
     const size_t _in_num_dims;
     BaseLayer* _next = nullptr;
     BaseLayer* _prev = nullptr;
+    std::string _descriptor;
 
     BaseLayer* next();
     BaseLayer* prev();
-    BaseLayer(size_t, size_t);
-    std::string_view which();
+    BaseLayer(size_t, size_t, std::string_view);
+    std::string which();
 
     virtual void fwd(ThreadPoolDevice* device=nullptr) = 0;
     virtual void fwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr) = 0;
@@ -77,19 +79,21 @@ protected:
 
 public:
     Layer(): 
-        BaseLayer{ std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{} }
+        BaseLayer{ std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{}, 
+        traits<Derived>::description}
     {
-        std::cout << test;
     }
     Layer(out_shape_t out_shape)
-        :BaseLayer{ std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{}},
+        :BaseLayer{ std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{},
+        traits<Derived>::description},
         _out_shape{out_shape}
     {
         std::copy(_out_shape.begin(), _out_shape.end(), 
             _out_batch_shape.begin());
     }    
     Layer(out_shape_t out_shape, in_shape_t in_shape)
-        :BaseLayer{ std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{} },
+        :BaseLayer{ std::tuple_size<out_shape_t>{}, std::tuple_size<in_shape_t>{},
+        traits<Derived>::description},
         _out_shape{out_shape}, _in_shape{in_shape}
     {
         std::copy(_out_shape.begin(), _out_shape.end(), 

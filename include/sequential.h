@@ -68,19 +68,20 @@ public:
         layer = layer->prev();
 
         int i = 0;
-        std::cout << "Backwards: \n";
-        Timer timer;
+        //std::cout << "Backwards: \n";
+        //Timer timer;
 
         while(layer){
-            std::cout << "layer " << i << ": ";
-            timer.start();
+            //std::cout << layer->which() << ": ";
+            //timer.start();
             layer->bwd(_device);
-            timer.stop();
-            std::cout << timer.elapsedMilliseconds() << "\n";
+            //timer.stop();
+            //std::cout << timer.elapsedMilliseconds() << "\n";
             i++;
 
             layer = layer->prev();
         }
+        //std::cout << "\n";
     }
     void fwdProp(Tensor<float, 2>& input){
 
@@ -89,19 +90,20 @@ public:
         layer = layer->next();
 
         int i = 0;
-        std::cout << "Forwards: \n";
-        Timer timer;
+        //std::cout << "Forwards: \n";
+        //Timer timer;
 
         while(layer){
-            std::cout << "layer " << i << ": ";
-            timer.start();
+            //std::cout << layer->which() << ": ";
+            //timer.start();
             layer->fwd(_device);
-            timer.stop();
-            std::cout << timer.elapsedMilliseconds() << "\n";
-            i++;
+            //timer.stop();
+            //std::cout << timer.elapsedMilliseconds() << "\n";
+            //i++;
 
             layer = layer->next();
         }
+        //std::cout << "\n";
     }
     void bkwProp(Tensor<float, 2>&& output){bkwProp(output);}
     void fwdProp(Tensor<float, 2>&& input){fwdProp(input);}

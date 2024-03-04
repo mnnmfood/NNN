@@ -26,7 +26,6 @@ int main(){
 
     std::cout << "--TESTING Mnist Data" << "\n";
     std::string dataDir {"../../../data/mnist_csv/"};
-    std::cout << "HEEAPPPP\n\n";
     
     std::array<Eigen::Index, 2> offsets{ 0, 0 };
     std::array<Eigen::Index, 2> extents{ 784, 100 };
@@ -64,9 +63,8 @@ int main(){
         std::array<Index, 1>{10});
 
     // Optimize using Stochastic Gradient Descent
-    int epochs = 1;// 20;
-    int batch_size = 20;
-    std::cout << x.dimensions();
+    int epochs = 20;
+    int batch_size = 100;
     float learning_rate = 0.01;
     float momentum = 0.0;
     model.SGD(x, y, epochs, batch_size, learning_rate, momentum, val_x, val_y);
