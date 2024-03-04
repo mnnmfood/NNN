@@ -6,7 +6,6 @@
 #include <string_view>
 #include <iostream>
 #include <fstream>
-#include <Eigen/Dense>
 #include <vector>
 #include "typedefs.h"
 #include "pngWrapper.h"

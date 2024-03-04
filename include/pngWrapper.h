@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <fstream>
 
-#include <unsupported/Eigen/CXX11/Tensor>
 #include "typedefs.h"
 #include "eigenFuns.h"
 

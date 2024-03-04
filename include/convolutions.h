@@ -1,7 +1,7 @@
 #ifndef CONVOLV_H
 #define CONVOLV_H
 
-#include <unsupported/Eigen/CXX11/Tensor>
+#include "typedefs.h"
 
 namespace Eigen{
 

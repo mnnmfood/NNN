@@ -42,6 +42,8 @@ void testFeedFwd(){
 }
 
 void testBackProp(){
+    std::array<Index, 1> in_shape{ 36 };
+    std::array<Index, 1> out_shape{ 8 };
     Sequential2 model({
         new ReshapeLayer<1, 4>(std::array<Index, 4>({1, 6, 6, 1})),
         new ConvolLayer(std::array<Index, 3>({2, 3, 3})),
@@ -50,27 +52,19 @@ void testBackProp(){
         new SigmoidLayer(8)
         }
         , new MSE(),
-        std::array<Index, 1>{36},
-        std::array<Index, 1>{8});
+        in_shape,
+        out_shape);
 
     int n_samples {2};
 
-    Eigen::Tensor<float, 1> xi(36);
-    Eigen::Tensor<float, 2> x(36, n_samples);
-    for(int i{0}; i < n_samples; i++){
-        xi.setConstant(i);
-        x.chip(i, 1) = xi;
-    }
+    Eigen::Tensor<float, 2> x(in_shape[0], n_samples);
+    x.setRandom();
 
     model.init(n_samples);
     model.fwdProp(x);
     
-    Eigen::Tensor<float, 1> yi(8); 
-    Eigen::Tensor<float, 2> y(8, n_samples);
-    for(int i{0}; i < n_samples; i++){
-        y.setConstant(i);
-        y.chip(i, 1) = yi;
-    }
+    Eigen::Tensor<float, 2> y(out_shape[0], n_samples);
+    y.setRandom();
 
     model.bkwProp(y);
     std::cout << "Success\n";

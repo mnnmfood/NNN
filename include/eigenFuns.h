@@ -2,8 +2,6 @@
 #define FUNCTORS_H
 
 #include <functional>
-#include <Eigen/Dense>
-#include <unsupported/Eigen/CXX11/Tensor>
 #include "typedefs.h"
 
 // ---- Sum Matrix and Vector colwise or rowwise

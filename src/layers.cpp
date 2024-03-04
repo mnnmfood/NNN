@@ -1,6 +1,6 @@
 
-#include <Eigen/Dense>
 #include <iostream>
+#include "typedefs.h"
 #include "layers.h"
 #include "utils.h"
 #include "convolutions.h"
@@ -92,7 +92,7 @@ void FCLayer::init(Index batch_size){
     _nabla_w = nabla_weight_t(_out_batch_shape); 
 }
 
-void FCLayer::fwd(){
+void FCLayer::fwd(ThreadPoolDevice* device){
     assert(_prev != nullptr);
     _winputs = vecSum(_weights.contract(prev_act(), 
         product_dims), _biases, false);
@@ -100,15 +100,15 @@ void FCLayer::fwd(){
     _act = act(_winputs);
 }
 
-void FCLayer::fwd(TensorWrapper<float>&&){}
-void FCLayer::bwd(TensorWrapper<float>&& cost_grad){
+void FCLayer::fwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
+void FCLayer::bwd(TensorWrapper<float>&& cost_grad, ThreadPoolDevice* device){
     assert(_next == nullptr);
     _nabla_b = cost_grad.get(_out_batch_shape) * grad_act(_winputs);
     _nabla_w = _nabla_b.contract(transposed(prev_act()), product_dims);
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
-void FCLayer::bwd(){
+void FCLayer::bwd(ThreadPoolDevice* device){
     assert(_next != nullptr);
     _nabla_b = next_grad() * grad_act(_winputs);
     Tensor<float, 2> temp = transposed(prev_act());
@@ -212,6 +212,8 @@ void ConvolLayer::init(Index batch_size){
 
     _out_batch_shape.back() = batch_size;
     _in_batch_shape.back() = batch_size;
+
+    _act = out_t(_out_batch_shape);
     _grad = in_t(_in_batch_shape);
 
     std::array<Index, 2> shape_nabla_b{
@@ -221,16 +223,17 @@ void ConvolLayer::init(Index batch_size){
     _nabla_b.setConstant(0);
 }
 
-void ConvolLayer::fwd(){
+void ConvolLayer::fwd(ThreadPoolDevice* device){
     Tensor<float, 5> temp = prev_act();
     //_act = convolveBatch(prev_act(), _weights);
-    _act = convolveBatch(temp, _weights);
+    //_act = convolveBatch(temp, _weights);
+    _act.device(*device) = convolveBatch(temp, _weights);
 }
 
-void ConvolLayer::fwd(TensorWrapper<float>&&){}
-void ConvolLayer::bwd(TensorWrapper<float>&&){}
+void ConvolLayer::fwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
+void ConvolLayer::bwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
 
-void ConvolLayer::bwd() {
+void ConvolLayer::bwd(ThreadPoolDevice* device) {
 
     Index batch_size {_out_batch_shape.back()};
     Index depth {_shape[0]};
@@ -253,16 +256,15 @@ void ConvolLayer::bwd() {
 
     for (Index k{ 0 }; k < in_depth; k++) {
         offsets_output[3] = k * depth;
-        //_grad.chip(k, 3).device(device) = backwardsConvolveInput(
-        _grad.chip(k, 3) = backwardsConvolveInput(
+        //_grad.chip(k, 3) = backwardsConvolveInput(
+        _grad.chip(k, 3).device(*device) = backwardsConvolveInput(
             grad.slice(offsets_output, extents_output),
             _weights, im_rows, im_cols);
-        //result2.device(device) += backwardsConvolveKernel(
-        _nabla_w += backwardsConvolveKernel(
+        //_nabla_w += backwardsConvolveKernel(
+        _nabla_w.device(*device) += backwardsConvolveKernel(
             act.chip(k, 3),
             grad.slice(offsets_output, extents_output),
             ker_rows, ker_cols);
-
     }
 }
 
@@ -275,12 +277,12 @@ PoolingLayer::PoolingLayer(std::array<Index, 2> shape, Index stride)
 void PoolingLayer::initParams(){
     _in_shape = prev_shape();
     _out_shape = {
-        1,
+        _in_shape[0],
         static_cast<Index>(ceil( 
             (static_cast<float>(_in_shape[1] - _shape[0] + 1)) / _stride)),
         static_cast<Index>(ceil( 
             (static_cast<float>(_in_shape[2] - _shape[1] + 1)) / _stride)),
-        _in_shape[0]
+        _in_shape[3]
     };
 }
 
@@ -294,10 +296,10 @@ void PoolingLayer::init(Index batch_size){
     _grad = in_t(_in_batch_shape);
     _act = out_t(_out_batch_shape);
 }
-void PoolingLayer::fwd(TensorWrapper<float>&&){}
-void PoolingLayer::bwd(TensorWrapper<float>&&){}
+void PoolingLayer::fwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
+void PoolingLayer::bwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
 
-void PoolingLayer::fwd(){
+void PoolingLayer::fwd(ThreadPoolDevice* device){
     //auto act = prev_act();
     Tensor<float, 6> patches;    
     patches = prev_act().extract_image_patches(
@@ -310,11 +312,15 @@ void PoolingLayer::fwd(){
     _maxCol = patches.abs().maximum(row_max_dims).argmax(1);
 
     _maxRow = Tensor<Index, 4>(_maxCol.dimensions());
-    for(Index i{0}; i < patches.dimension(5); i++){
-        for(Index k{0}; k < patches.dimension(4); k++){
-            for(Index l{0}; l < patches.dimension(3); l++){
+    
+    // [channels, row, col, patch, in_depth, batch]
+    // [0, row, col, patch, batch]
+    for(Index batch{0}; batch < patches.dimension(5); batch++){
+        for(Index in_depth{0}; in_depth < patches.dimension(4); in_depth++){
+            for(Index patch{0}; patch < patches.dimension(3); patch++){
                 //_maxRow(k, l, i) = maxEachRow(k, _maxCol(k, l, i), l, i);
-                _maxRow(0, l, k, i) = maxEachRow(0, _maxCol(0, l, k, i), l, k, i);
+                _maxRow(0, patch, in_depth, batch) = 
+                    maxEachRow(0, _maxCol(0, patch, in_depth, batch), patch, in_depth, batch);
             }
         }
     }
@@ -322,15 +328,15 @@ void PoolingLayer::fwd(){
     Index row_l{0}, col_l{0};
     Index cols {_act.dimension(2)};
     Index max_row_patch, max_col_patch;
-    for(Index i{0}; i < patches.dimension(5); i++){
-        for(Index k{0}; k < patches.dimension(4); k++){
-            for(Index l{0}; l < patches.dimension(3); l++){
-                row_l = l % cols; 
-                col_l = l / cols;
-                max_col_patch = _maxCol(0, l, k, i);
-                max_row_patch = _maxRow(0, l, k, i);
-                _act(0, row_l, col_l, k, i) = 
-                    patches(0, max_row_patch, max_col_patch, l, k, i);
+    for(Index batch{0}; batch < patches.dimension(5); batch++){
+        for(Index in_depth{0}; in_depth < patches.dimension(4); in_depth++){
+            for(Index patch{0}; patch < patches.dimension(3); patch++){
+                row_l = patch % cols; 
+                col_l = patch / cols;
+                max_col_patch = _maxCol(0, patch, in_depth, batch);
+                max_row_patch = _maxRow(0, patch, in_depth, batch);
+                _act(0, row_l, col_l, in_depth, batch) = 
+                    patches(0, max_row_patch, max_col_patch, patch, in_depth, batch);
                 //_act(k, row_l, col_l, i) = 
                 //    patches(k, max_row_patch, max_col_patch, l, i);
             }
@@ -338,7 +344,7 @@ void PoolingLayer::fwd(){
     }
 }
 
-void PoolingLayer::bwd(){
+void PoolingLayer::bwd(ThreadPoolDevice* device){
 #if 1
     Tensor<float, 5> grad = next_grad();
     Tensor<float, 5> act = prev_act().abs();
@@ -347,15 +353,16 @@ void PoolingLayer::bwd(){
     Index idx;
     Index rows_l {grad.dimension(2)};
     Index max_row_patch, max_col_patch;
-    for(Index i{0}; i < grad.dimension(4); i++){
-        for(Index k{0}; k < grad.dimension(3); k++){
-            for(Index l{0}; l < grad.dimension(1); l++){
-                for(Index m{0}; m < grad.dimension(2); m++){
-                    idx = m*rows_l + l;
-                    max_row_patch = _maxRow(0, idx, k, i) + l * _stride;
-                    max_col_patch = _maxCol(0, idx, k, i) + m * _stride;
+    for(Index batch{0}; batch < grad.dimension(4); batch++){ // i
+        for(Index out_depth{0}; out_depth < grad.dimension(3); out_depth++){ // k
+            for(Index row{0}; row < grad.dimension(1); row++){ // l
+                for(Index col{0}; col < grad.dimension(2); col++){ // m
+                    idx = col*rows_l + row;
+                    max_row_patch = _maxRow(0, idx, out_depth, batch) + row * _stride;
+                    max_col_patch = _maxCol(0, idx, out_depth, batch) + col * _stride;
                     //_grad(k, max_row_patch,  max_col_patch, i) = grad(k, l, m, i);
-                    _grad(0, max_row_patch,  max_col_patch, k, i) = grad(0, l, m, k, i);
+                    _grad(0, max_row_patch,  max_col_patch, out_depth, batch) = 
+                        grad(0, row, col, out_depth, batch);
                 }
             }
         }

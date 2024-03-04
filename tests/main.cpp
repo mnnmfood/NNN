@@ -3,8 +3,6 @@
 #include <iomanip>
 #include <vector>
 
-#include <Eigen/Dense>
-
 #include "typedefs.h"
 #include "costs.h"
 #include "utils.h"
@@ -29,13 +27,19 @@ int main(){
     std::cout << "--TESTING Mnist Data" << "\n";
     std::string dataDir {"../../../data/mnist_csv/"};
     std::cout << "HEEAPPPP\n\n";
+    
+    std::array<Eigen::Index, 2> offsets{ 0, 0 };
+    std::array<Eigen::Index, 2> extents{ 784, 100 };
+    std::array<Eigen::Index, 2> extents_y{ 10, 100 };
+
     Tensor<float, 2> x;
     load_csv(dataDir + "train_x.csv", x);
     //x = x.slice(offsets, extents);
     std::cout << "Training Shape x: " << x.dimension(0) << ", " << x.dimension(1)<< '\n';
+
     Tensor<float, 2> y;
     load_csv(dataDir + "train_y.csv", y);
-    //y = y.slice(offsets, extents);
+    //y = y.slice(offsets, extents_y);
     std::cout << "Training Shape y: " << y.dimension(0) << ", " << y.dimension(1)<< '\n';
 
     Tensor<float, 2> val_x;
@@ -60,8 +64,9 @@ int main(){
         std::array<Index, 1>{10});
 
     // Optimize using Stochastic Gradient Descent
-    int epochs = 20;
+    int epochs = 1;// 20;
     int batch_size = 20;
+    std::cout << x.dimensions();
     float learning_rate = 0.01;
     float momentum = 0.0;
     model.SGD(x, y, epochs, batch_size, learning_rate, momentum, val_x, val_y);

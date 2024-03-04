@@ -1,7 +1,6 @@
 #ifndef LAYERS_H
 #define LAYERS_H
 
-#include<Eigen/Dense>
 #include<random>
 #include "Tensor.h"
 #include "typedefs.h"
@@ -26,10 +25,10 @@ public:
     BaseLayer* prev();
     BaseLayer(size_t, size_t);
 
-    virtual void fwd() = 0;
-    virtual void fwd(TensorWrapper<float>&&) = 0;
-    virtual void bwd() = 0;
-    virtual void bwd(TensorWrapper<float>&&) = 0;
+    virtual void fwd(ThreadPoolDevice* device=nullptr) = 0;
+    virtual void fwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr) = 0;
+    virtual void bwd(ThreadPoolDevice* device=nullptr) = 0;
+    virtual void bwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr) = 0;
 
     virtual void init(Index) = 0;
     virtual void initParams() = 0;
@@ -150,12 +149,12 @@ public:
         this->_act = out_t(this->_out_batch_shape);
     }
     void initParams(){}
-    void fwd(){}
-    void fwd(TensorWrapper<float>&& input){
+    void fwd(ThreadPoolDevice* device=nullptr){}
+    void fwd(TensorWrapper<float>&& input, ThreadPoolDevice* device=nullptr){
         this->_act = input.get(this->_in_batch_shape);
     }
-    void bwd(){};
-    void bwd(TensorWrapper<float>&& output){};
+    void bwd(ThreadPoolDevice* device=nullptr){};
+    void bwd(TensorWrapper<float>&& output, ThreadPoolDevice* device=nullptr){};
 };
 
 template<size_t N>
@@ -174,12 +173,12 @@ public:
         this->_in_batch_shape.back() = n_samples;
     }
     void initParams(){}
-    void fwd(){
+    void fwd(ThreadPoolDevice* device=nullptr){
       this->_act = this->prev_act();  
     }
-    void fwd(TensorWrapper<float>&& input){}
-    void bwd(){};
-    void bwd(TensorWrapper<float>&& output){
+    void fwd(TensorWrapper<float>&& input, ThreadPoolDevice* device=nullptr){}
+    void bwd(ThreadPoolDevice* device=nullptr){};
+    void bwd(TensorWrapper<float>&& output, ThreadPoolDevice* device=nullptr){
         this->_grad = output.get(this->_out_batch_shape);
     }
 };
@@ -210,16 +209,16 @@ public:
         std::copy(this->_in_shape.begin(), this->_in_shape.end(), 
             this->_in_batch_shape.begin());
     }
-    void fwd(){
+    void fwd(ThreadPoolDevice* device=nullptr){
         this->_act = this->prev_act()
             .reshape(this->_out_batch_shape);  
     }
-    void fwd(TensorWrapper<float>&& input){}
-    void bwd(){
+    void fwd(TensorWrapper<float>&& input, ThreadPoolDevice* device=nullptr){}
+    void bwd(ThreadPoolDevice* device=nullptr){
         this->_grad = this->next_grad()
             .reshape(this->_in_batch_shape);  
     };
-    void bwd(TensorWrapper<float>&& output){}
+    void bwd(TensorWrapper<float>&& output, ThreadPoolDevice* device=nullptr){}
 };
 
 class FlattenLayer: public Layer<FlattenLayer>
@@ -250,17 +249,17 @@ public:
             this->_out_batch_shape.begin());
     }
 
-    void fwd(){
+    void fwd(ThreadPoolDevice* device=nullptr){
         this->_act = this->prev_act()
             .reshape(this->_out_batch_shape);  
     }
 
-    void fwd(TensorWrapper<float>&& input){}
-    void bwd(){
+    void fwd(TensorWrapper<float>&& input, ThreadPoolDevice* device=nullptr){}
+    void bwd(ThreadPoolDevice* device=nullptr){
         this->_grad = this->next_grad()
             .reshape(this->_in_batch_shape);  
     };
-    void bwd(TensorWrapper<float>&& output){}
+    void bwd(TensorWrapper<float>&& output, ThreadPoolDevice* device=nullptr){}
 };
 
 class FCLayer: public Layer<FCLayer>
@@ -271,11 +270,11 @@ public:
     void init(Index batch_size);
     void initParams();
 
-    void fwd();
-    void bwd();
+    void fwd(ThreadPoolDevice* device=nullptr);
+    void bwd(ThreadPoolDevice* device=nullptr);
 
-    void fwd(TensorWrapper<float>&&);
-    void bwd(TensorWrapper<float>&&);
+    void fwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr);
+    void bwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr);
 
     virtual Tensor<float, 2> act(const Tensor<float, 2>&) = 0;
     virtual Tensor<float, 2> grad_act(const Tensor<float, 2>&) = 0;
@@ -314,10 +313,10 @@ public:
     void init(Index batch_size);
     void initParams();
 
-    void fwd(TensorWrapper<float>&&);
-    void bwd(TensorWrapper<float>&&);
-    void fwd();
-    void bwd();
+    void fwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr);
+    void bwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr);
+    void fwd(ThreadPoolDevice* device=nullptr);
+    void bwd(ThreadPoolDevice* device=nullptr);
 };
 
 class PoolingLayer:public Layer<PoolingLayer>
@@ -332,10 +331,10 @@ public:
     void init(Index batch_size);
     void initParams();
 
-    void fwd(TensorWrapper<float>&&);
-    void bwd(TensorWrapper<float>&&);
-    void fwd();
-    void bwd();
+    void fwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr);
+    void bwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr);
+    void fwd(ThreadPoolDevice* device=nullptr);
+    void bwd(ThreadPoolDevice* device=nullptr);
 };
 
 

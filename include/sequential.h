@@ -1,7 +1,6 @@
 #ifndef SEQUENTIAL_H
 #define SEQUENTIAL_H
 
-#include <Eigen/Dense>
 #include <vector>
 #include <initializer_list>
 #include "typedefs.h"
@@ -17,14 +16,24 @@ class Sequential2
     const size_t num_layers;
     std::array<Index, num_dims_in> _in_shape;
     std::array<Index, num_dims_out> _out_shape;
+    ThreadPool* _pool;
+    Eigen::ThreadPoolDevice* _device;
 public:
     Sequential2(std::initializer_list<BaseLayer*> layers, CostFun* cost, 
         std::array<Index, num_dims_in> in_shape, std::array<Index, num_dims_out> out_shape)
     :_layers{layers}, _cost{cost}, num_layers{_layers.size() + 2},
     _in_shape{in_shape}, _out_shape{out_shape}{
+        
+        // Initialize device
+        const int pool_n{ 8 };
+        const int thread_n{ 4 };
+        this->_pool = new ThreadPool(pool_n);
+        this->_device = new ThreadPoolDevice(_pool, thread_n);
+
         // Add input and output layers
         _layers.insert(_layers.begin(), new InputLayer(_in_shape));
         _layers.push_back(new OutputLayer(_out_shape));
+
         // connect forward
         _layers[0]->_prev = nullptr;
         BaseLayer* prev_layer = _layers[0];
@@ -34,6 +43,7 @@ public:
             _layers[i-1]->initParams();
             prev_layer = _layers[i];
         }
+
         // connect backwards
         BaseLayer* next_layer = nullptr;
         for(size_t i{num_layers}; i > 0; i--){
@@ -50,19 +60,21 @@ public:
         BaseLayer* layer = _layers.back();
         layer->bwd(TensorWrapper(
             _cost->grad((layer->get_act()).get(output.dimensions()), output)
-        ));
+            ),
+            _device
+        );
         layer = layer->prev();
         while(layer){
-            layer->bwd();
+            layer->bwd(_device);
             layer = layer->prev();
         }
     }
     void fwdProp(Tensor<float, 2>& input){
         BaseLayer* layer = _layers.front();
-        layer->fwd(TensorWrapper(input));
+        layer->fwd(TensorWrapper(input), _device);
         layer = layer->next();
         while(layer){
-            layer->fwd();
+            layer->fwd(_device);
             layer = layer->next();
         }
     }
@@ -142,6 +154,14 @@ public:
             temp.begin());
         temp.back() = batch_size;
         return _layers.back()->get_act().get(temp);
+    }
+
+    ~Sequential2() {
+        for (size_t i{ 0 }; i < num_layers; i++) {
+            delete _layers[i];
+        }
+        delete _pool;
+        delete _device;
     }
 };
 

@@ -1,7 +1,6 @@
 #ifndef COSTS_H
 #define COSTS_H
 
-#include <Eigen/Dense>
 #include <cmath>
 #include <iostream>
 #include <functional>
