@@ -88,6 +88,27 @@ inline int load_csv(std::string fpath, Tensor<std::string, 2>& data)
     return 1;
 }
 
+template<typename ArgType>
+inline void imwrite(ArgType im, std::string path) {
+    static_assert(ArgType::NumDimensions == 2);
+    typedef typename Eigen::internal::traits<ArgType>::Index TensorIndex;
+    typedef typename Eigen::internal::traits<ArgType>::Scalar ImScalar;
+
+    TensorRef<Tensor<ImScalar, Eigen::internal::traits<ArgType>::NumDimensions,
+                    Eigen::internal::traits<ArgType>::Layout, TensorIndex>>
+        im_ref(im);
+    
+    Index height = im_ref.dimension(0);
+	Index width = im_ref.dimension(1);
+
+    Tensor<byte, 2> im_norm = im.unaryExpr(max_normalize_op(im, 255)).cast<byte>();
+    std::ofstream fpo(path + ".png", std::ios::binary);
+    png::PNGWriter writer(fpo, 
+            png::pngInfo(height, width));
+    writer.write(PNG_COLOR_TYPE_GRAY, im_norm);
+}
+
+#if 0
 inline void imwrite(Tensor<float, 2>& im, std::string path){
 
     std::ofstream fpo(path + ".png", std::ios::binary);
@@ -102,5 +123,6 @@ inline void imwrite(Tensor<float, 2>& im, std::string path){
 inline void imwrite(Tensor<float, 2>&& im, std::string&& path){
     imwrite(im, path);
 }
+#endif
 
 #endif

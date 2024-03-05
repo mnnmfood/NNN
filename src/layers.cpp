@@ -4,6 +4,7 @@
 #include "layers.h"
 #include "utils.h"
 #include "convolutions.h"
+#include "max_poling.h"
 
 scalar_comparer_op<float> min_comparer([](float x, float y)->float {return x < y ? x: y;});
 scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y ? x: y;});
@@ -225,6 +226,9 @@ void ConvolLayer::init(Index batch_size){
 
 void ConvolLayer::fwd(ThreadPoolDevice* device){
     _act.device(*device) = convolveBatch(prev_act(), _weights);
+    //imwrite(_act.chip(0, 4).chip(0, 3).chip(0, 0), "./" + std::to_string(_i) + "_conv.png");
+    //imwrite(prev_act().chip(0, 4).chip(0, 3).chip(0, 0), "./" + std::to_string(_i) + "_orig.png");
+    //_i++;
 }
 
 void ConvolLayer::fwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
@@ -261,7 +265,6 @@ void ConvolLayer::bwd(ThreadPoolDevice* device) {
     }
 }
 
-#if 1
 PoolingLayer::PoolingLayer(std::array<Index, 2> shape, Index stride)
     :Layer{}, _shape{shape}, _stride{stride}
 {
@@ -288,78 +291,45 @@ void PoolingLayer::init(Index batch_size){
     _in_batch_shape.back() = batch_size;
     _grad = in_t(_in_batch_shape);
     _act = out_t(_out_batch_shape);
+    _argmax = Tensor<Index, 5>(_out_batch_shape);
 }
 void PoolingLayer::fwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
 void PoolingLayer::bwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
 
-void PoolingLayer::fwd(ThreadPoolDevice* device){
-    //auto act = prev_act();
-    Tensor<float, 6> patches;    
-    patches = prev_act().extract_image_patches(
-        _shape[0], _shape[1], _stride, _stride, 1, 1, Eigen::PADDING_VALID
-    );
 
-    Tensor<Index, 5> maxEachRow;
-    maxEachRow = patches.abs().argmax(1);
-    const std::array<Index, 1> row_max_dims ({1});
-    _maxCol = patches.abs().maximum(row_max_dims).argmax(1);
+void PoolingLayer::fwd(ThreadPoolDevice* device) {
+    const Index ir = _in_shape[1];
+    const Index ic = _in_shape[2];
+    const Index kr = _shape[0];
+    const Index kc = _shape[1];
+    const Index stride = _stride;
+    const Index depth = _in_shape[3];
+    const Index batch = _in_batch_shape[4];
 
-    _maxRow = Tensor<Index, 4>(_maxCol.dimensions());
-    
-    // [channels, row, col, patch, in_depth, batch]
-    // [0, row, col, patch, batch]
-    for(Index batch{0}; batch < patches.dimension(5); batch++){
-        for(Index in_depth{0}; in_depth < patches.dimension(4); in_depth++){
-            for(Index patch{0}; patch < patches.dimension(3); patch++){
-                //_maxRow(k, l, i) = maxEachRow(k, _maxCol(k, l, i), l, i);
-                _maxRow(0, patch, in_depth, batch) = 
-                    maxEachRow(0, _maxCol(0, patch, in_depth, batch), patch, in_depth, batch);
-            }
-        }
-    }
+    max_pooling(prev_act(), ir, ic, depth, batch, kr, kc, stride, _act, _argmax);
 
-    Index row_l{0}, col_l{0};
-    Index cols {_act.dimension(2)};
-    Index max_row_patch, max_col_patch;
-    for(Index batch{0}; batch < patches.dimension(5); batch++){
-        for(Index in_depth{0}; in_depth < patches.dimension(4); in_depth++){
-            for(Index patch{0}; patch < patches.dimension(3); patch++){
-                row_l = patch % cols; 
-                col_l = patch / cols;
-                max_col_patch = _maxCol(0, patch, in_depth, batch);
-                max_row_patch = _maxRow(0, patch, in_depth, batch);
-                _act(0, row_l, col_l, in_depth, batch) = 
-                    patches(0, max_row_patch, max_col_patch, patch, in_depth, batch);
-                //_act(k, row_l, col_l, i) = 
-                //    patches(k, max_row_patch, max_col_patch, l, i);
-            }
-        }
-    }
+    //imwrite(_act.chip(0, 4).chip(0, 3).chip(0, 0), "./" + std::to_string(_i) + "_max_pool.png");
+    //imwrite(prev_act().chip(0, 4).chip(0, 3).chip(0, 0), "./" + std::to_string(_i) + "_conv_orig.png");
+    //_i++;
 }
 
-void PoolingLayer::bwd(ThreadPoolDevice* device){
-#if 1
+void PoolingLayer::bwd(ThreadPoolDevice* device) {
+    const Index outr = _out_shape[1];
+    const Index outc = _out_shape[2];
+    const Index depth = _out_shape[3];
+    const Index batch= _out_batch_shape[4];
+    
     Tensor<float, 5> grad = next_grad();
-    Tensor<float, 5> act = prev_act().abs();
-    _grad.setConstant(0);
-
-    Index idx;
-    Index rows_l {grad.dimension(2)};
-    Index max_row_patch, max_col_patch;
-    for(Index batch{0}; batch < grad.dimension(4); batch++){ // i
-        for(Index out_depth{0}; out_depth < grad.dimension(3); out_depth++){ // k
-            for(Index row{0}; row < grad.dimension(1); row++){ // l
-                for(Index col{0}; col < grad.dimension(2); col++){ // m
-                    idx = col*rows_l + row;
-                    max_row_patch = _maxRow(0, idx, out_depth, batch) + row * _stride;
-                    max_col_patch = _maxCol(0, idx, out_depth, batch) + col * _stride;
-                    //_grad(k, max_row_patch,  max_col_patch, i) = grad(k, l, m, i);
-                    _grad(0, max_row_patch,  max_col_patch, out_depth, batch) = 
-                        grad(0, row, col, out_depth, batch);
+    //_grad.setConstant(0.0f);
+    Index idx_flat = 0;
+    for(Index i{0}; i < batch; i++){ // batch
+        for(Index k{0}; k < depth; k++){ // depth
+            for(Index r{0}; r < outr; r++){ // rows
+                for(Index c{0}; c < outc; c++){ // cols
+                    idx_flat = _argmax(0, r, c, k, i);
+                    _grad(idx_flat) = grad(0, r, c, k, i);
                 }
             }
         }
     }
-#endif
 }
-#endif

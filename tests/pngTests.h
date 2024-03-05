@@ -104,27 +104,31 @@ void testBulk()
     }
 }
 
-void testConvolve(){
+void testConvolve() {
     std::cout << "-- Test Convolution" << "\n";
-    std::string dataDir {data_dir + "mnist_csv/"};
+    std::string dataDir{ data_dir + "mnist_csv/" };
     Tensor<float, 2> data;
     load_csv(dataDir + "train_x.csv", data);
     Tensor<float, 2> x;
-    x = data.slice(std::array<Index, 2>({0, 0}), 
-        std::array<Index, 2>({data.dimension(0), 10}));
-    Sequential2 model ({
-        new ReshapeLayer<1, 3>(std::array<Index, 3>{1, 28, 28}),
-        new ConvolLayer(std::array<Index, 3>{1, 3, 3})}, 
+    x = data.slice(std::array<Index, 2>({ 0, 0 }),
+        std::array<Index, 2>({ data.dimension(0), 10 }));
+
+    Sequential2 model({
+        new ReshapeLayer<1, 4>(std::array<Index, 4>{1, 28, 28, 1}),
+        new ConvolLayer(std::array<Index, 3>{1, 3, 3})
+        //new ReshapeLayer<4, 2>(std::array<Index, 2>{26, 26})
+        },
         new MSE(),
-        std::array<Index, 1> {784}, std::array<Index, 3>{1, 26, 26}
-        );
+        std::array<Index, 1> {784}, std::array<Index, 2>{26, 26}
+	);
+
     size_t batch_size = x.dimension(1); 
     model.init(batch_size);
     model.fwdProp(x);
-    Tensor<float, 4> result = model.output(batch_size);
+    Tensor<float, 3> result = model.output(batch_size);
 
     for(size_t i{0}; i < batch_size; i++){
-        Tensor<float, 2> image = result.chip(i, 3).chip(0, 0);
+        Tensor<float, 2> image = result.chip(i, 2);
         Tensor<byte, 2> image_norm = 
             image.unaryExpr(max_normalize_op(result, 255)).cast<byte>();
 

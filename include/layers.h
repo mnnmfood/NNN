@@ -17,6 +17,7 @@ inline std::mt19937 gen{rd()};
 class BaseLayer
 {
 public:
+    int _i = 0;
     const size_t _out_num_dims;
     const size_t _in_num_dims;
     BaseLayer* _next = nullptr;
@@ -133,6 +134,12 @@ public:
         assert(_prev != nullptr);
         return _prev->get_act().get(_in_batch_shape);
     }
+
+    auto prev_act_flat() {
+        assert(_prev != nullptr);
+        return _prev->get_act().get();
+    }
+
     auto next_grad(){
         assert(_next != nullptr);
         return _next->get_grad().get(_out_batch_shape);
@@ -331,8 +338,8 @@ class PoolingLayer:public Layer<PoolingLayer>
 private:
     std::array<Index, 2> _shape;
     Index _stride;
-    Tensor<Index, 4> _maxRow;
-    Tensor<Index, 4> _maxCol;
+    Tensor<Index, 5> _argmax;
+    int _i = 0;
 public:
     PoolingLayer(std::array<Index, 2>, Index);
     void init(Index batch_size);
