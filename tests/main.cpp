@@ -60,9 +60,8 @@ int main(){
         new ReshapeLayer<1, 4>(std::array<Index, 4>{1, 28, 28, 1}),
         new ConvolLayer(std::array<Index, 3>{32, 3, 3}),
         new PoolingLayer(std::array<Index, 2>{3, 3}, 1),
-        new ConvolLayer(std::array<Index, 3>{1, 3, 3}),
-        new PoolingLayer(std::array<Index, 2>{3, 3}, 3),
         new FlattenLayer(),
+        new SigmoidLayer(100),
         new SigmoidLayer(10),
         }
         , new MSE(), 
