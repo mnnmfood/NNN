@@ -112,10 +112,6 @@ void FCLayer::bwd(TensorWrapper<float>&& cost_grad, ThreadPoolDevice* device){
 void FCLayer::bwd(ThreadPoolDevice* device){
     assert(_next != nullptr);
     _nabla_b = next_grad() * grad_act(_winputs);
-    Tensor<float, 2> temp = transposed(prev_act());
-    Tensor<float, 2> temp2 = _nabla_b.contract(
-        temp, product_dims
-    );
     _nabla_w = _nabla_b.contract(
         transposed(prev_act()), product_dims);
 
@@ -252,7 +248,7 @@ void ConvolLayer::bwd(ThreadPoolDevice* device) {
         depth,
         _out_batch_shape[4],
     };
-
+    _nabla_w.setConstant(0.0f);
     for (Index k{ 0 }; k < in_depth; k++) {
         offsets_output[3] = k * depth;
         _grad.chip(k, 3).device(*device) = backwardsConvolveInput(
@@ -320,7 +316,7 @@ void PoolingLayer::bwd(ThreadPoolDevice* device) {
     const Index batch= _out_batch_shape[4];
     
     Tensor<float, 5> grad = next_grad();
-    //_grad.setConstant(0.0f);
+    _grad.setConstant(0.0f);
     Index idx_flat = 0;
     for(Index i{0}; i < batch; i++){ // batch
         for(Index k{0}; k < depth; k++){ // depth
