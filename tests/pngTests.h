@@ -3,10 +3,10 @@
 #include "pngWrapper.h"
 #include "layers.h"
 
-inline const std::string data_dir {"../../../data/"};
+//inline const std::string data_dir {"../../data/"};
 inline const std::string out_dir {"./"};
 
-void testColor()
+void testColor(std::string& data_dir)
 {
 
     std::cout << "-Read Color" << "\n";
@@ -28,7 +28,7 @@ void testColor()
     std::cout << writer;
 }
 
-void testGray()
+void testGray(std::string& data_dir)
 {
 
     std::cout << "-Read Grayscale" << "\n";
@@ -49,7 +49,7 @@ void testGray()
     std::cout << writer;
 }
 
-void testReset()
+void testReset(std::string& data_dir)
 {
     // First read-write
     std::string dataDir {data_dir + "png/"};
@@ -73,7 +73,7 @@ void testReset()
     writer.write(PNG_COLOR_TYPE_GRAY, data);
 }
 
-void testBulk()
+void testBulk(std::string& data_dir)
 {
     std::cout << "-- Test Bulk" << "\n";
     int batch_size = 32;
@@ -104,14 +104,11 @@ void testBulk()
     }
 }
 
-void testConvolve() {
+void testConvolve(std::string& data_dir) {
     std::cout << "-- Test Convolution" << "\n";
     std::string dataDir{ data_dir + "mnist_csv/" };
-    Tensor<float, 2> data;
-    load_csv(dataDir + "train_x.csv", data);
     Tensor<float, 2> x;
-    x = data.slice(std::array<Index, 2>({ 0, 0 }),
-        std::array<Index, 2>({ data.dimension(0), 10 }));
+    load_csv(dataDir + "train_x.csv", x, 10);
 
     Sequential2 model({
         new ReshapeLayer<1, 4>(std::array<Index, 4>{1, 28, 28, 1}),
@@ -139,16 +136,16 @@ void testConvolve() {
     }
 }
 
-void testPNG()
+void testPNG(std::string& data_dir)
 {
-    testConvolve();
-    testColor();
-    testGray();
-    testReset();
+    testConvolve(data_dir);
+    testColor(data_dir);
+    testGray(data_dir);
+    testReset(data_dir);
 
     struct stat info;
     std::string pathname {data_dir + "mnist_png"};
     if(stat(pathname.data(), &info)==0)
-        testBulk();
+        testBulk(data_dir);
     std::cout << "Success" << "\n\n";
 }

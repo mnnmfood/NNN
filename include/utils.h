@@ -11,7 +11,8 @@
 #include "pngWrapper.h"
 
 template<typename ArgType>
-inline int load_csv(std::string fpath, ArgType& data){
+inline int load_csv(std::string fpath, ArgType& data, int total_lines=-1){
+    const bool not_full_file = total_lines > 0;
     typedef typename ArgType::Scalar Scalar;
 
     std::ifstream fin;
@@ -21,31 +22,30 @@ inline int load_csv(std::string fpath, ArgType& data){
     temp.reserve(1000);
 
     size_t lines{0};
-    try{
-        do{
-
-            std::getline(fin, line); 
+    try {
+        while (fin){
+            std::getline(fin, line);
             std::stringstream s(line);
 
-            while(std::getline(s, word, ',')){
+            while (std::getline(s, word, ',')) {
                 temp.push_back(static_cast<Scalar>(std::stof(word)));
             }
+            lines++;
 
-            lines+=1;
-            //if(lines > 1000)
-            //    break;
-        }while(fin);
+            if (not_full_file && (lines > (total_lines-1))) {
+                lines++;
+                break;
+            }
+
+        }
     } catch(const std::exception& exception){
             fin.close();
             return 0;
     }
-
-    lines -= 1;
-    std::cout << "Samples: " << lines << '\n';
+    lines--;
     fin.close();
     data = TensorMap<ArgType> (temp.data(), 
            temp.size()/lines, lines);
-    std::cout << "Size: " << temp.size() << "\n\n";
     // Each column is a sample
     return 1;
 }

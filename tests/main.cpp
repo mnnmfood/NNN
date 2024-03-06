@@ -12,10 +12,17 @@
 #include "tests.h"
 #include "pngTests.h"
 
+#define xstr(x) str(x)
+#define str(x) #x
+
+#ifndef DATA_DIR
+#define DATA_DIR ../../
+#endif
+
 int main(){
-#if 1
     std::cout << " --TESTING PNG" << "\n";
-    testPNG();
+    std::string dataDir = xstr(DATA_DIR);
+    testPNG(dataDir);
 
     std::cout << "--TESTING INIT" << "\n";
     testSequentialInit();
@@ -25,18 +32,20 @@ int main(){
     testBackProp();
 
     std::cout << "--TESTING Mnist Data" << "\n";
-    std::string dataDir {"../../../data/mnist_csv/"};
+    //std::string dataDir {"../../data/mnist_csv/"};
+    dataDir = dataDir + "/mnist_csv/";
     
     std::array<Eigen::Index, 2> offsets{ 0, 0 };
     std::array<Eigen::Index, 2> extents{ 784, 100 };
     std::array<Eigen::Index, 2> extents_y{ 10, 100 };
-
+    
+    int n_samples = 2000;
     Tensor<float, 2> x;
-    load_csv(dataDir + "train_x.csv", x);
+    load_csv(dataDir + "train_x.csv", x, n_samples);
     std::cout << "Training Shape x: " << x.dimension(0) << ", " << x.dimension(1)<< '\n';
 
     Tensor<float, 2> y;
-    load_csv(dataDir + "train_y.csv", y);
+    load_csv(dataDir + "train_y.csv", y, n_samples);
     std::cout << "Training Shape y: " << y.dimension(0) << ", " << y.dimension(1)<< '\n';
 
     Tensor<float, 2> val_x;
@@ -62,13 +71,12 @@ int main(){
 
     // Optimize using Stochastic Gradient Descent
     int epochs = 20;
-    int batch_size = 20;
-    float learning_rate = 0.1;
+    int batch_size = 100;
+    float learning_rate = 0.7;
     float momentum = 0.0;
     model.SGD(x, y, epochs, batch_size, learning_rate, momentum, val_x, val_y);
 
     std::cout << std::setprecision(2);
     std::cout << "Final accuracy "  << model.accuracy(val_x, val_y)*100;
     std::cout << "%" << "\n\n";
-#endif
 }

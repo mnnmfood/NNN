@@ -20,15 +20,11 @@ void max_pooling(ArgType1& input, Index ir, Index ic, Index depth, Index batch,
 		for (Index k{ 0 }; k < depth; k++) {
 			for (Index r{ 0 }; r < ir; r++) {
 				for (Index c{ 0 }; c < ic; c++) {
-					// This is the windows of the output affected by the input at
-					// r, c
+					// This is the window of the output affected by the input at r, c
 					Index hstart = (r - kr) < 0 ? 0 : (r - kr) / stride + 1;
-					//Index hend = (r + kr) > outr ? outr : r / stride + 1;
 					Index hend = std::min(outr, r / stride + 1);
 					Index wstart = (c - kc) < 0 ? 0 : (c - kc) / stride + 1;
-					//Index wend = (c + kc) > outc ? outc : c / stride + 1;
 					Index wend = std::min(outc, c / stride + 1);
-					//std::cout << r << ", " << c << ", " << k << ", " << i << "\n";
 					for (Index h{ hstart }; h < hend; h++) {
 						for (Index w{ wstart }; w < wend; w++) {
 							Index idx_flat = r + c * ir + k * ic * ir + i * ic * ir * depth;
