@@ -173,8 +173,8 @@ struct max_normalize_op
         m_mult{mult}
     {
     }
-    float operator()(Scalar a) const{
-        return m_mult * (a- m_min) / (m_max-m_min);
+    Scalar operator()(Scalar a) const{
+        return m_mult * (a - m_min) / (m_max-m_min);
     }
 private:
     Scalar m_max;

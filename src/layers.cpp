@@ -188,7 +188,6 @@ ConvolLayer::ConvolLayer(std::array<Index, 3> shape)
     ));
     _weights = weight_t(channels_shape).unaryExpr(std::ref(sampleFun));
     _nabla_w = nabla_weight_t(channels_shape);
-    _biases = bias_t(shape[0]).unaryExpr(std::ref(sampleFun));
 }
 
 void ConvolLayer::initParams(){
@@ -222,9 +221,6 @@ void ConvolLayer::init(Index batch_size){
 
 void ConvolLayer::fwd(ThreadPoolDevice* device){
     _act.device(*device) = convolveBatch(prev_act(), _weights);
-    //imwrite(_act.chip(0, 4).chip(0, 3).chip(0, 0), "./" + std::to_string(_i) + "_conv.png");
-    //imwrite(prev_act().chip(0, 4).chip(0, 3).chip(0, 0), "./" + std::to_string(_i) + "_orig.png");
-    //_i++;
 }
 
 void ConvolLayer::fwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
@@ -303,10 +299,6 @@ void PoolingLayer::fwd(ThreadPoolDevice* device) {
     const Index batch = _in_batch_shape[4];
 
     max_pooling(prev_act(), ir, ic, depth, batch, kr, kc, stride, _act, _argmax);
-
-    //imwrite(_act.chip(0, 4).chip(0, 3).chip(0, 0), "./" + std::to_string(_i) + "_max_pool.png");
-    //imwrite(prev_act().chip(0, 4).chip(0, 3).chip(0, 0), "./" + std::to_string(_i) + "_conv_orig.png");
-    //_i++;
 }
 
 void PoolingLayer::bwd(ThreadPoolDevice* device) {

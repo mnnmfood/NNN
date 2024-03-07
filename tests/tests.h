@@ -1,8 +1,14 @@
 #ifndef TEST_H
 #define TEST_H
 
+#include <filesystem>
+#include "timer.h"
 #include "sequential.h"
 #include "costs.h"
+#include "utils.h"
+#include "batchReader.h"
+
+namespace fs = std::filesystem;
 
 void printShape(const Matrix<float, Dynamic, Dynamic>& a){ 
     std::cout << " Shape: (" << a.rows() << ", " << a.cols() << ")\n";
@@ -69,5 +75,21 @@ void testBackProp(){
     model.bkwProp(y);
     std::cout << "Success\n";
 }
+
+void testReadBatch(std::string& data_dir) {
+    Index batch_size = 10;
+    std::string fullpath{ data_dir + "mnist_png/testing/0" };
+    BatchPNGReader batch_reader(fullpath, batch_size);
+
+    Tensor<byte, 3> im_batch = batch_reader.get();
+    imwrite(im_batch.chip(0, 2), "./batch_test1");
+
+    batch_reader++;
+    im_batch = batch_reader.get();
+    imwrite(im_batch.chip(0, 2), "./batch_test2");
+    std::cout << "Success\n";
+}
+
+
 
 #endif

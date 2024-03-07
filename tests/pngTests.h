@@ -73,13 +73,14 @@ void testReset(std::string& data_dir)
     writer.write(PNG_COLOR_TYPE_GRAY, data);
 }
 
+#if 0
 void testBulk(std::string& data_dir)
 {
     std::cout << "-- Test Bulk" << "\n";
     int batch_size = 32;
     std::string fullpath {data_dir + "mnist_png/testing/0/"};
     Tensor<std::string, 2> index;
-    load_csv(fullpath + "index.csv", index);
+    load_csv(fullpath + "index.csv", index, batch_size);
 
     std::ifstream fp{fullpath + index(0, 0), std::ios::binary};
     png::PNGReader reader{fp};
@@ -103,6 +104,7 @@ void testBulk(std::string& data_dir)
         writer.write(PNG_COLOR_TYPE_GRAY, image0);
     }
 }
+#endif
 
 void testConvolve(std::string& data_dir) {
     std::cout << "-- Test Convolution" << "\n";
@@ -146,6 +148,6 @@ void testPNG(std::string& data_dir)
     struct stat info;
     std::string pathname {data_dir + "mnist_png"};
     if(stat(pathname.data(), &info)==0)
-        testBulk(data_dir);
+        //testBulk(data_dir);
     std::cout << "Success" << "\n\n";
 }

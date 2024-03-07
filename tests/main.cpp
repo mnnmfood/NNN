@@ -20,9 +20,13 @@
 #endif
 
 int main(){
+
     std::cout << " --TESTING PNG" << "\n";
     std::string dataDir = xstr(DATA_DIR);
     testPNG(dataDir);
+
+    std::cout << " --TESTING Batch Images" << "\n";
+    testReadBatch(dataDir);
 
     std::cout << "--TESTING INIT" << "\n";
     testSequentialInit();
@@ -58,10 +62,12 @@ int main(){
     // network architecture
     Sequential2 model({
         new ReshapeLayer<1, 4>(std::array<Index, 4>{1, 28, 28, 1}),
-        new ConvolLayer(std::array<Index, 3>{32, 3, 3}),
+        new ConvolLayer(std::array<Index, 3>{10, 3, 3}),
+        new PoolingLayer(std::array<Index, 2>{3, 3}, 1),
+        new ConvolLayer(std::array<Index, 3>{5, 3, 3}),
         new PoolingLayer(std::array<Index, 2>{3, 3}, 1),
         new FlattenLayer(),
-        new SigmoidLayer(100),
+        //new SigmoidLayer(100),
         new SigmoidLayer(10),
         }
         , new MSE(), 
@@ -70,8 +76,8 @@ int main(){
 
     // Optimize using Stochastic Gradient Descent
     int epochs = 20;
-    int batch_size = 100;
-    float learning_rate = 0.7;
+    int batch_size = 20;
+    float learning_rate = 0.01;
     float momentum = 0.0;
     model.SGD(x, y, epochs, batch_size, learning_rate, momentum, val_x, val_y);
 
