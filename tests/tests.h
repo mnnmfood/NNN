@@ -73,20 +73,44 @@ void testBackProp(){
     y.setRandom();
 
     model.bkwProp(y);
-    std::cout << "Success\n";
+    std::cout << "Success\n\n";
 }
 
 void testReadBatch(std::string& data_dir) {
     Index batch_size = 10;
-    std::string fullpath{ data_dir + "mnist_png/testing/0" };
+    std::string fullpath{ data_dir + "mnist_png/training" };
     BatchPNGReader batch_reader(fullpath, batch_size);
+    size_t n_images = batch_reader.size();
+    std::cout << "number of training images: " <<
+        n_images << "\n\n";
+    Tensor<float, 2> label_batch;
+    Tensor<byte, 3> image_batch;
+    //batch_reader.get(label_batch, image_batch);
+    auto begin = batch_reader.begin();
+    label_batch = begin.labels();
+    image_batch = begin.images();
 
-    Tensor<byte, 3> im_batch = batch_reader.get();
-    imwrite(im_batch.chip(0, 2), "./batch_test1");
+    Tensor<byte, 2> im = image_batch.chip(0, 2);
+    Tensor<Index, 0> label = label_batch
+        .chip(0, 1).argmax();
+    imwrite(im, "./_" + std::to_string(label(0)));
 
-    batch_reader++;
-    im_batch = batch_reader.get();
-    imwrite(im_batch.chip(0, 2), "./batch_test2");
+    size_t n = 0;
+    auto end = batch_reader.end();
+    for(;begin!=end;begin++){
+        n++;
+        if (n == 98) {
+            int a = 9;
+        }
+    }
+    assert(n == (n_images / batch_size));
+    begin--;
+    label_batch = begin.labels();
+    image_batch = begin.images();
+    im = image_batch.chip(0, 2);
+    label = label_batch
+        .chip(0, 1).argmax();
+	imwrite(im, "./_" + std::to_string(label(0)));
     std::cout << "Success\n";
 }
 

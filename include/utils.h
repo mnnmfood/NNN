@@ -91,27 +91,6 @@ inline int load_csv(std::string fpath, Tensor<std::string, 2>& data, int total_l
     return 1;
 }
 
-template<typename iter = std::vector<std::string>::iterator>
-inline auto
-imread_bulk(iter begin, iter end) {
-    // create reader and check image shape
-	std::ifstream fp{*begin, std::ios::binary};
-	png::PNGReader reader{fp};
-	const Eigen::Index width = reader.m_info.width;
-	const Eigen::Index height = reader.m_info.height;
-    const Eigen::Index batch = static_cast<Index>(end - begin);
-    const Eigen::Index total_bytes = width * height * sizeof(byte);
-    byte* data_arr = (byte*)malloc(total_bytes * batch);
-    
-    int i{ 0 };
-    for (; begin != end; begin++, i++){
-        std::ifstream fpi(*begin, std::ios::binary);
-        reader.reset(fpi);
-        reader.read_arr(data_arr + total_bytes * i, width, height, PNG_COLOR_TYPE_GRAY);
-    }
-    return transposed(TensorMap<Tensor<byte, 3>>(data_arr, height, width, batch));
-}
-
 template<typename ArgType>
 inline void imwrite(ArgType im, std::string path) {
     static_assert(ArgType::NumDimensions == 2);

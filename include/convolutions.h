@@ -24,12 +24,13 @@ TensorReshapingOp<
 convolveBatch(const ArgType& input, KerType& kernels){
     typedef typename internal::traits<ArgType>::Index TensorIndex;
     typedef typename internal::traits<ArgType>::Scalar OutScalar;
+    typedef typename internal::traits<KerType>::Scalar KerScalar;
 
     TensorRef<Tensor<typename internal::traits<ArgType>::Scalar,
                     internal::traits<ArgType>::NumDimensions,
                     internal::traits<ArgType>::Layout, TensorIndex>>
         input_ref(input);
-    TensorRef<Tensor<OutScalar, internal::traits<KerType>::NumDimensions,
+    TensorRef<Tensor<KerScalar, internal::traits<KerType>::NumDimensions,
                     internal::traits<KerType>::Layout, TensorIndex>>
         kernels_ref(kernels);
 

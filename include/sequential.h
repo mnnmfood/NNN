@@ -4,14 +4,16 @@
 #include <vector>
 #include <initializer_list>
 #include "typedefs.h"
+#include "batchReader.h"
 #include "layers.h"
 #include "costs.h"
-#include "timer.h"
 #include "timer.h"
 
 template<size_t num_dims_in, size_t num_dims_out>
 class Sequential2
 {
+    typedef Tensor<float, num_dims_in + 1> in_batch_t;
+    typedef Tensor<float, num_dims_out + 1> out_batch_t;
 
     std::vector<BaseLayer*> _layers;
     CostFun* _cost;
@@ -58,7 +60,7 @@ public:
             _layers[i]->init(batch_size);
         }
     }
-    void bkwProp(Tensor<float, 2>& output){
+    void bkwProp(const out_batch_t& output){
         BaseLayer* layer = _layers.back();
         layer->bwd(TensorWrapper(
             _cost->grad((layer->get_act()).get(output.dimensions()), output)
@@ -67,53 +69,54 @@ public:
         );
         layer = layer->prev();
 
-        int i = 0;
-        //std::cout << "Backwards: \n";
-        //Timer timer;
-
         while(layer){
-            //std::cout << layer->which() << ": ";
-            //timer.start();
             layer->bwd(_device);
-            //timer.stop();
-            //std::cout << timer.elapsedMilliseconds() << "\n";
-            i++;
-
             layer = layer->prev();
         }
-        //std::cout << "\n";
     }
-    void fwdProp(Tensor<float, 2>& input){
-
+    void fwdProp(const in_batch_t& input){
         BaseLayer* layer = _layers.front();
         layer->fwd(TensorWrapper(input), _device);
         layer = layer->next();
-
-        int i = 0;
-        //std::cout << "Forwards: \n";
-        //Timer timer;
-
         while(layer){
-            //std::cout << layer->which() << ": ";
-            //timer.start();
             layer->fwd(_device);
-            //timer.stop();
-            //std::cout << timer.elapsedMilliseconds() << "\n";
-            //i++;
-
             layer = layer->next();
         }
-        //std::cout << "\n";
     }
-    void bkwProp(Tensor<float, 2>&& output){bkwProp(output);}
-    void fwdProp(Tensor<float, 2>&& input){fwdProp(input);}
+    void bkwProp(const out_batch_t&& output){bkwProp(output);}
+    void fwdProp(const in_batch_t&& input){fwdProp(input);}
+    
+    void SGD(BatchPNGReader train_reader, int epochs, float lr,
+        float mu, BatchPNGReader val_reader){
+        Timer timer;
+        //Tensor<float, 2> labels;
+        //Tensor<byte, 3> images;
+        for(int k{0}; k < epochs; k++){
+            init(train_reader.batch());
+            train_reader.reset();
+            timer.start();
+            auto end = train_reader.end();
+            for(auto it=train_reader.begin(); it!=end; it++){
+                //train_reader.get(labels, images);
+                fwdProp(it.images().cast<float>());
+                bkwProp(it.labels());
+                //fwdProp(images.cast<float>());
+                //bkwProp(labels);
+                for(size_t i{0}; i < num_layers; i++){
+                    _layers[i]->update(lr, mu, train_reader.batch());                
+                }
+            }
+			timer.stop();
+            std::cout << "Epoch " << k + 1 << "\n";
+			float cost_t = accuracy(val_reader);
+			std::cout << "Accuracy: " << cost_t*100 << " %" << "\n";
+            std::cout << "Time: " << timer.elapsedMilliseconds() << "ms\n";
+        }
 
-    void SGD(Tensor<float, num_dims_in+1>& x,
-            Tensor<float, num_dims_out+1>& y, 
-            int epochs, int batch_size, float lr, float mu,
-            Tensor<float, num_dims_in+1>& val_x,
-            Tensor<float, 2>&val_y){
-        
+    }
+
+    void SGD(in_batch_t& x, out_batch_t& y, int epochs, int batch_size, 
+        float lr, float mu, in_batch_t& val_x, out_batch_t& val_y){
         Timer timer;
         size_t train_size = x.dimension(num_dims_in);
 
@@ -126,14 +129,11 @@ public:
             init(batch_size);
             timer.start();
             std::shuffle(indices.begin(), indices.end(), gen);
-
+            
             for(size_t l{0}; l < train_size-batch_size; l+=batch_size){
-
                 std::copy_n(indices.begin()+l, batch_size, sub_indices.begin());
                 fwdProp(sliced(x, sub_indices, num_dims_in));
                 bkwProp(sliced(y, sub_indices, num_dims_out));
-
-
                 for(size_t i{0}; i < num_layers; i++){
                     _layers[i]->update(lr, mu, batch_size);                
                 }
@@ -146,8 +146,33 @@ public:
             std::cout << "Time: " << timer.elapsedMilliseconds() << "ms\n";
         }
     }
+    
+    float accuracy(BatchPNGReader val_reader) {
+        const Eigen::Index test_size{val_reader.size()};
+        const Eigen::Index batch_size{val_reader.batch()};
+        val_reader.reset();
+        int sum = 0;
+		Tensor<float, 2> labels;
+		Tensor<byte, 3> images;
+        Tensor<Index, 0> y;
+        Tensor<Index, 0> y_pred;
+        auto end = val_reader.end();
+        for(auto it = val_reader.begin(); it!=end;it++){
+            init(batch_size);
+            fwdProp(it.images().cast<float>());
+            labels = it.labels();
+            Tensor<float, 2> pred = _layers.back()
+                ->get_act().get(labels.dimensions());
+            for (Eigen::Index i{ 0 }; i < batch_size; i++) {
+                y_pred = pred.chip(i, 1).argmax();
+                y = labels.chip(i, 1).argmax();
+                sum += (static_cast<int>(y(0)) == y_pred(0));
+            }
+        }
+        return static_cast<float>(sum) / static_cast<float>(test_size);
+    }
 
-    float accuracy(Tensor<float, num_dims_in + 1>& x, Tensor<float, 2>& y){
+    float accuracy(in_batch_t& x, out_batch_t& y){
         Eigen::Index test_size{x.dimension(num_dims_in)};
         init(test_size);
         fwdProp(x);
@@ -169,12 +194,11 @@ public:
 
         return static_cast<float>(sum) / static_cast<float>(test_size);
     }
-
-    float accuracy(Tensor<float, num_dims_in>&& x, Tensor<float, 2>&& y){
+    float accuracy(in_batch_t&& x, out_batch_t&& y){
         return accuracy(x, y);
     }
 
-    Tensor<float, num_dims_out + 1> output(Index batch_size){
+    out_batch_t output(Index batch_size){
         std::array<Index, num_dims_out + 1> temp;
         std::copy(_out_shape.begin(), _out_shape.end(), 
             temp.begin());

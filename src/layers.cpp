@@ -211,16 +211,13 @@ void ConvolLayer::init(Index batch_size){
 
     _act = out_t(_out_batch_shape);
     _grad = in_t(_in_batch_shape);
-
-    std::array<Index, 2> shape_nabla_b{
-        _shape[0], batch_size
-    };
-    _nabla_b = nabla_b_t(shape_nabla_b); 
-    _nabla_b.setConstant(0);
 }
 
 void ConvolLayer::fwd(ThreadPoolDevice* device){
     _act.device(*device) = convolveBatch(prev_act(), _weights);
+
+    //imwrite(this->_act.chip(0, 4).chip(0, 3).chip(0, 0), "./_convol1");
+    //imwrite(this->_act.chip(10, 4).chip(0, 3).chip(0, 0), "./_convol2");
 }
 
 void ConvolLayer::fwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}

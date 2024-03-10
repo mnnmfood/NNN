@@ -73,39 +73,6 @@ void testReset(std::string& data_dir)
     writer.write(PNG_COLOR_TYPE_GRAY, data);
 }
 
-#if 0
-void testBulk(std::string& data_dir)
-{
-    std::cout << "-- Test Bulk" << "\n";
-    int batch_size = 32;
-    std::string fullpath {data_dir + "mnist_png/testing/0/"};
-    Tensor<std::string, 2> index;
-    load_csv(fullpath + "index.csv", index, batch_size);
-
-    std::ifstream fp{fullpath + index(0, 0), std::ios::binary};
-    png::PNGReader reader{fp};
-    size_t width = reader.m_info.width;
-    size_t height = reader.m_info.height;
-    size_t total = width * height;
-    std::cout << width << ", " << height << "\n";
-
-    Tensor<byte, 3> images(height, width, batch_size);
-    for(int i{0}; i < batch_size; i++){
-        std::ifstream fpi(fullpath + index(0, i), std::ios::binary);
-        reader.reset(fpi);
-        reader.read_arr(images.data() + total * i, width, height, PNG_COLOR_TYPE_GRAY);
-    }
-    images = transposed(images);
-    for(int i{0}; i < batch_size; i++){
-        Tensor<byte, 2> image0 = images.chip(i, 2);
-        std::ofstream fpo(out_dir + "bulk_" + std::to_string(i) + ".png", std::ios::binary);
-        png::PNGWriter writer(fpo, png::pngInfo(width, height));
-        //writer.write_arr(image0.data(), width, height, PNG_COLOR_TYPE_GRAY);
-        writer.write(PNG_COLOR_TYPE_GRAY, image0);
-    }
-}
-#endif
-
 void testConvolve(std::string& data_dir) {
     std::cout << "-- Test Convolution" << "\n";
     std::string dataDir{ data_dir + "mnist_csv/" };

@@ -226,6 +226,8 @@ public:
     void fwd(ThreadPoolDevice* device=nullptr){
         this->_act = this->prev_act()
             .reshape(this->_out_batch_shape);  
+        //imwrite(this->_act.chip(0, 4).chip(0, 3).chip(0, 0), "./_orig1");
+        //imwrite(this->_act.chip(5, 4).chip(0, 3).chip(0, 0), "./_orig2");
     }
     void fwd(TensorWrapper<float>&& input, ThreadPoolDevice* device=nullptr){}
     void bwd(ThreadPoolDevice* device=nullptr){
