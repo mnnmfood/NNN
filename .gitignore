@@ -11,3 +11,4 @@ include/*.png
 
 *.exe
 *.zip
+!data/mnist_png.zip
