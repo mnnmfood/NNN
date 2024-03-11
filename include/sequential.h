@@ -85,7 +85,35 @@ public:
     }
     void bkwProp(const out_batch_t&& output){bkwProp(output);}
     void fwdProp(const in_batch_t&& input){fwdProp(input);}
-    
+   
+    template<class reader>
+    void SGD(reader& train_reader, int epochs, float lr,
+        float mu, reader& val_reader) {
+        typedef reader::out_data_t data_t;
+        // check if read data type matches input data type
+        static_assert(std::is_same<in_batch_t, data_t>::value);
+
+        Timer timer;
+        for (int k{ 0 }; k < epochs; k++) {
+            init(train_reader.batch());
+            train_reader.reset();
+            timer.start();
+            auto end = train_reader.end();
+            for (auto it = train_reader.begin(); it != end; it++) {
+                fwdProp(it.data());
+                bkwProp(it.labels());
+                for (size_t i{ 0 }; i < num_layers; i++) {
+                    _layers[i]->update(lr, mu, train_reader.batch());
+                }
+            }
+            timer.stop();
+            std::cout << "Epoch " << k + 1 << "\n";
+            float cost_t = accuracy(val_reader);
+            std::cout << "Accuracy: " << cost_t * 100 << " %" << "\n";
+            std::cout << "Time: " << timer.elapsedMilliseconds() << "ms\n";
+        }
+    }
+#if 0 
     void SGD(BatchPNGReader train_reader, int epochs, float lr,
         float mu, BatchPNGReader val_reader){
         Timer timer;
@@ -114,6 +142,7 @@ public:
         }
 
     }
+#endif
 
     void SGD(in_batch_t& x, out_batch_t& y, int epochs, int batch_size, 
         float lr, float mu, in_batch_t& val_x, out_batch_t& val_y){
@@ -147,19 +176,20 @@ public:
         }
     }
     
-    float accuracy(BatchPNGReader val_reader) {
+    template<class reader>
+    float accuracy(reader& val_reader) {
+        typedef reader::out_label_t label_t;
         const Eigen::Index test_size{val_reader.size()};
         const Eigen::Index batch_size{val_reader.batch()};
         val_reader.reset();
         int sum = 0;
-		Tensor<float, 2> labels;
-		Tensor<byte, 3> images;
+		label_t labels;
         Tensor<Index, 0> y;
         Tensor<Index, 0> y_pred;
         auto end = val_reader.end();
         for(auto it = val_reader.begin(); it!=end;it++){
             init(batch_size);
-            fwdProp(it.images().cast<float>());
+            fwdProp(it.data());
             labels = it.labels();
             Tensor<float, 2> pred = _layers.back()
                 ->get_act().get(labels.dimensions());

@@ -44,7 +44,7 @@ void imread_bulk(ptr_t* begin, ptr_t* end, Tensor<byte, 3>& images){
 struct BatchPNGIterator
 {
 
-	typedef Tensor<byte, 3> out_data_t;
+	typedef Tensor<float, 3> out_data_t;
 	typedef Tensor<float, 2> out_label_t;
 	typedef std::pair<int, std::string> it_t;
 
@@ -79,7 +79,7 @@ struct BatchPNGIterator
 	friend bool operator==(BatchPNGIterator& a, BatchPNGIterator& b) { return a._begin == b._begin; }
 	friend bool operator!=(BatchPNGIterator& a, BatchPNGIterator& b) { return a._begin != b._begin; }
 	
-	const Tensor<float, 2>& labels() {
+	out_label_t labels() {
 		//one-hot encode labels
 		_labels.setConstant(0.0f);
 		for (int i{ 0 }; i < _batch; ++i) {
@@ -88,10 +88,10 @@ struct BatchPNGIterator
 		}
 		return _labels;
 	}
-
-	const Tensor<byte, 3>& images() {
+	
+	out_data_t data() {
 		imread_bulk(_begin, _begin + _batch, _images);
-		return _images;
+		return _images.cast<float>();
 	}
 
 private:

@@ -92,9 +92,9 @@ void testReadBatchPNG(std::string& data_dir) {
     //batch_reader.get(label_batch, image_batch);
     auto begin = batch_reader.begin();
     label_batch = begin.labels();
-    image_batch = begin.images();
+    image_batch = begin.data();
 
-    Tensor<byte, 2> im = image_batch.chip(0, 2);
+    Tensor<float, 2> im = image_batch.chip(0, 2);
     Tensor<Index, 0> label = label_batch
         .chip(0, 1).argmax();
     imwrite(im, "./_" + std::to_string(label(0)));
@@ -110,7 +110,7 @@ void testReadBatchPNG(std::string& data_dir) {
     assert(n == (n_images / batch_size));
     begin--;
     label_batch = begin.labels();
-    image_batch = begin.images();
+    image_batch = begin.data();
     im = image_batch.chip(0, 2);
     label = label_batch
         .chip(0, 1).argmax();
