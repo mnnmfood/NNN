@@ -19,7 +19,7 @@ void imread_bulk(ptr_t* begin, ptr_t* end, Tensor<byte, 3>& images){
 		const Eigen::Index width = reader.m_info.width;
 		const Eigen::Index height = reader.m_info.height;
 		const Eigen::Index total_bytes = width * height * sizeof(byte);
-		const Eigen::DSizes<Eigen::Index, 3> i_shape({
+		const Eigen::array<Eigen::Index, 3> i_shape({
 			height,
 			width,
 			batch
@@ -41,41 +41,43 @@ void imread_bulk(ptr_t* begin, ptr_t* end, Tensor<byte, 3>& images){
 	}
 }
 
-struct BatchIterator
+struct BatchPNGIterator
 {
-	typedef std::pair<int, std::string> it_t;
-	typedef std::pair<Tensor<float, 2>, Tensor<byte, 3>> data_t;
 
-	BatchIterator(it_t* begin, Index batch, int num_labels)
+	typedef Tensor<byte, 3> out_data_t;
+	typedef Tensor<float, 2> out_label_t;
+	typedef std::pair<int, std::string> it_t;
+
+	BatchPNGIterator(it_t* begin, Index batch, int num_labels)
 		:_begin{ begin }, _batch{ batch }, _num_labels{ num_labels },
 		_labels(static_cast<Index>(num_labels), batch)
 	{
 	}
 
-	BatchIterator& operator ++() {
+	BatchPNGIterator& operator ++() {
 		_begin += _batch;
 		return *this;
 	}
 
-	BatchIterator operator ++(int) {
-		BatchIterator temp = *this;
+	BatchPNGIterator operator ++(int) {
+		BatchPNGIterator temp = *this;
 		++(*this);
 		return temp;
 	}
 
-	BatchIterator& operator --() {
+	BatchPNGIterator& operator --() {
 		_begin -= _batch;
 		return *this;
 	}
 
-	BatchIterator operator --(int) {
-		BatchIterator temp = *this;
+	BatchPNGIterator operator --(int) {
+		BatchPNGIterator temp = *this;
 		--(*this);
 		return temp;
 	}
 	
-	friend bool operator==(BatchIterator& a, BatchIterator& b) { return a._begin == b._begin; }
-	friend bool operator!=(BatchIterator& a, BatchIterator& b) { return a._begin != b._begin; }
+	friend bool operator==(BatchPNGIterator& a, BatchPNGIterator& b) { return a._begin == b._begin; }
+	friend bool operator!=(BatchPNGIterator& a, BatchPNGIterator& b) { return a._begin != b._begin; }
 	
 	const Tensor<float, 2>& labels() {
 		//one-hot encode labels
@@ -103,23 +105,27 @@ private:
 
 class BatchPNGReader
 {
+	typedef BatchPNGIterator it;
 	typedef std::pair<int, std::string> data_t;
 	std::mt19937 _gen;
 	std::string _ext = ".png";
 	std::string _parent_dir;
 	std::vector<data_t> _path_arr;
-	
+
 	data_t* _data;
 	Index _batch;
 	Eigen::Index _total_size;
 	int _labels{ 0 };
 
-public: 
+public:
+	typedef it::out_data_t out_data_t;
+	typedef it::out_label_t out_label_t;
+
 	BatchPNGReader(std::string& dir, Index batch)
-		:_parent_dir{dir}, _batch{batch}
+		:_parent_dir{ dir }, _batch{ batch }
 	{
 		std::random_device rd{};
-		_gen = std::mt19937{rd()};
+		_gen = std::mt19937{ rd() };
 
 		for (const auto& p_entry : fs::directory_iterator(_parent_dir)) {
 			if (fs::is_directory(p_entry)) {
@@ -140,18 +146,19 @@ public:
 			throw(std::runtime_error("No images found"));
 		}
 		// shuffle before loading any images
-        std::shuffle(_path_arr.begin(), _path_arr.end(), _gen);
+		std::shuffle(_path_arr.begin(), _path_arr.end(), _gen);
 	}
-	
-	BatchIterator begin() { return BatchIterator(_data, _batch, _labels); }
-	BatchIterator end() { 
+
+	BatchPNGIterator begin() { return BatchPNGIterator(_data, _batch, _labels); }
+	BatchPNGIterator end() {
 		// address used to stop iteration
-		int last_idx = _total_size - _total_size % _batch;
-		return BatchIterator(_data + last_idx, _batch, _labels);
+		int misal = _total_size % _batch;
+		int last_idx = misal == 0 ? _total_size : _total_size - _batch + misal;
+		return BatchPNGIterator(_data + last_idx, _batch, _labels);
 	}
 
 	void reset() {
-        std::shuffle(_path_arr.begin(), _path_arr.end(), _gen);
+		std::shuffle(_path_arr.begin(), _path_arr.end(), _gen);
 	}
 
 	Eigen::Index batch() {
@@ -161,25 +168,6 @@ public:
 	Eigen::Index size() {
 		return _total_size;
 	}
-#if 0	
-	int operator++() { 
-		if ((_index + _batch) < _total_size) {
-			_index += _batch; 
-			return 1;
-		}
-		return 0;
-	}
-	int operator++(int) { 
-		return ++(*this);
-	} 
-	
-	void get(Tensor<float, 2>& labels, Tensor<byte, 3>& images) {
-		imread_bulk(_path_arr.begin() + _index, _path_arr.begin() + _index + _batch, 
-					_labels, labels, images);
-	}
-
-
-#endif
 };
 
 #endif

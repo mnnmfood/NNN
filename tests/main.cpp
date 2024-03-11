@@ -26,7 +26,8 @@ int main(){
     testPNG(dataDir);
 
     std::cout << " --TESTING Batch Images" << "\n";
-    testReadBatch(dataDir);
+    testReadBatchPNG(dataDir);
+    testReadBatchCSV(dataDir);
 
     std::cout << "--TESTING INIT" << "\n";
     testSequentialInit();

@@ -4,7 +4,7 @@
 #include <vector>
 #include <initializer_list>
 #include "typedefs.h"
-#include "batchReader.h"
+#include "batchPNGReader.h"
 #include "layers.h"
 #include "costs.h"
 #include "timer.h"

@@ -6,7 +6,8 @@
 #include "sequential.h"
 #include "costs.h"
 #include "utils.h"
-#include "batchReader.h"
+#include "batchPNGReader.h"
+#include "batchCSVReader.h"
 
 namespace fs = std::filesystem;
 
@@ -76,15 +77,18 @@ void testBackProp(){
     std::cout << "Success\n\n";
 }
 
-void testReadBatch(std::string& data_dir) {
+void testReadBatchPNG(std::string& data_dir) {
+    typedef BatchPNGReader::out_data_t data_t;
+    typedef BatchPNGReader::out_label_t label_t;
     Index batch_size = 10;
     std::string fullpath{ data_dir + "mnist_png/training" };
     BatchPNGReader batch_reader(fullpath, batch_size);
+    batch_reader.reset();
     size_t n_images = batch_reader.size();
     std::cout << "number of training images: " <<
         n_images << "\n\n";
-    Tensor<float, 2> label_batch;
-    Tensor<byte, 3> image_batch;
+    label_t label_batch;
+    data_t image_batch;
     //batch_reader.get(label_batch, image_batch);
     auto begin = batch_reader.begin();
     label_batch = begin.labels();
@@ -113,6 +117,51 @@ void testReadBatch(std::string& data_dir) {
 	imwrite(im, "./_" + std::to_string(label(0)));
     std::cout << "Success\n";
 }
+
+void testReadBatchCSV(std::string& data_dir) {
+    typedef BatchCSVReader::out_data_t data_t;
+    typedef BatchCSVReader::out_label_t label_t;
+    Index batch_size = 10;
+    BatchCSVReader batch_reader(
+        data_dir + "mnist_csv/train_x.csv",
+        data_dir + "mnist_csv/train_y.csv",
+        batch_size
+    );
+    batch_reader.reset();
+    size_t n_images = batch_reader.size();
+    std::cout << "number of training images: " <<
+        n_images << "\n\n";
+    label_t label_batch;
+    data_t image_batch;
+    //batch_reader.get(label_batch, image_batch);
+    auto begin = batch_reader.begin();
+    label_batch = begin.labels();
+    image_batch = begin.data();
+
+    Tensor<float, 2> im = image_batch.chip(0, 1)
+        .reshape(std::array<Index, 2>{28, 28});
+    Tensor<Index, 0> label = label_batch
+        .chip(0, 1).argmax();
+    imwrite(im, "./_" + std::to_string(label(0)));
+
+    size_t n = 0;
+    auto end = batch_reader.end();
+    for(;begin!=end;begin++){
+        n++;
+    }
+    assert(n == (n_images / batch_size));
+    begin--;
+    label_batch = begin.labels();
+    image_batch = begin.data();
+    im = image_batch.chip(0, 1)
+        .reshape(std::array<Index, 2>{28, 28});
+    label = label_batch
+        .chip(0, 1).argmax();
+	imwrite(im, "./_" + std::to_string(label(0)));
+    std::cout << "Success\n";
+}
+
+
 
 
 
