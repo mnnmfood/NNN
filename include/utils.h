@@ -112,6 +112,8 @@ inline void imwrite(ArgType im, std::string path) {
     else {
         im_norm = im.cast<byte>();
     }
+    std::cout << im << "\n\n";
+    std::cout << im_norm<< "\n\n";
     std::ofstream fpo(path + ".png", std::ios::binary);
     png::PNGWriter writer(fpo, 
             png::pngInfo(height, width));

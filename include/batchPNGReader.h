@@ -5,7 +5,7 @@
 #include <random>
 #include <exception>
 #include "typedefs.h"
-#include "utils.h"
+#include "eigenFuns.h"
 #include "batchReader.h"
 
 namespace fs = std::filesystem;
@@ -92,9 +92,14 @@ struct BatchPNGIterator
 		return _labels;
 	}
 	
-	out_data_t data() {
+	const Eigen::TensorCwiseUnaryOp <
+		Eigen::internal::bind2nd_op<
+		Eigen::internal::scalar_quotient_op<float, float>>,
+		const Eigen::TensorConversionOp<float, 
+			const Tensor<byte, 3>>>
+	data() {
 		imread_bulk(_begin, _begin + _batch, _images);
-		return _images.cast<float>();
+		return _images.cast<float>() / 255.0f;
 	}
 
 private:
