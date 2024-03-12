@@ -103,9 +103,6 @@ void testReadBatchPNG(std::string& data_dir) {
     auto end = batch_reader.end();
     for(;begin!=end;begin++){
         n++;
-        if (n == 98) {
-            int a = 9;
-        }
     }
     assert(n == (n_images / batch_size));
     begin--;

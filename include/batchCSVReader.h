@@ -7,12 +7,13 @@
 #include <exception>
 #include "typedefs.h"
 #include "utils.h"
+#include "batchReader.h"
 
 struct BatchCSVIterator
 {
-	typedef std::pair<Index, Index> it_t;
-	typedef Tensor<float, 2> out_data_t;
-	typedef Tensor<float, 2> out_label_t;
+	typedef typename traits<BatchCSVReader>::data_t it_t;
+	typedef typename traits<BatchCSVReader>::out_data_t out_data_t;
+	typedef typename traits<BatchCSVReader>::out_label_t out_label_t;
 
 	BatchCSVIterator(it_t* begin, Index batch, std::ifstream& data_file, std::ifstream& label_file)
 		:_begin{ begin }, _batch{ batch }, _data_file(data_file), _label_file(label_file)
@@ -99,26 +100,15 @@ private:
 	Index _num_data;
 };
 
-class BatchCSVReader
+class BatchCSVReader: public BatchReader<BatchCSVReader>
 {
-	typedef BatchCSVIterator it;
-	typedef std::pair<Index, Index> data_t;
-	std::mt19937 _gen;
 	std::ifstream _data_file;
 	std::ifstream _label_file;
-	std::vector<data_t> _path_arr;
-	
-	data_t* _data;
-	Index _batch;
-	Eigen::Index _total_size{ 0 };
-	int _labels{ 0 };
 
 public: 
-	typedef it::out_data_t out_data_t;
-	typedef it::out_label_t out_label_t;
 
 	BatchCSVReader(std::string data_file, std::string label_file, Index batch)
-		:_data_file(data_file), _label_file(label_file), _batch{batch}
+		:BatchReader(batch), _data_file(data_file), _label_file(label_file)
 	{
 		std::string s;
 		Index off1 = 0, off2=0;
@@ -137,29 +127,10 @@ public:
 		_label_file = std::ifstream(label_file);
 		_data_file = std::ifstream(data_file);
 		_data = _path_arr.data();
+		_total_size = _path_arr.size();
 	}
 	
-	 BatchCSVIterator begin() { 
-		 return BatchCSVIterator(_data,  _batch, _data_file, _label_file);
-	 }
-	 BatchCSVIterator end() { 
-		// address used to stop iteration
-		int misal = _total_size % _batch;
-		int last_idx = misal == 0 ? _total_size : _total_size - _batch + misal;
-		return  BatchCSVIterator(_data + last_idx, _batch, _data_file, _label_file);
-	}
-
-	void reset() {
-        std::shuffle(_path_arr.begin(), _path_arr.end(), _gen);
-	}
-
-	Eigen::Index batch() {
-		return _batch;
-	}
-
-	Eigen::Index size() {
-		return _total_size;
-	}
+	BatchCSVIterator iter(data_t* data, Index batch) { return BatchCSVIterator(data, batch, _data_file, _label_file); }
 };
 
 #endif

@@ -7,6 +7,7 @@
 template<class Derived>
 struct traits {};
 
+// Layer traits
 class FCLayer;
 template<> struct traits<FCLayer>
 {
@@ -76,6 +77,28 @@ template<> struct traits<PoolingLayer>
     const static size_t NumDimensions = 4;
     inline constexpr static std::string_view description = "Pooling Layer";
 };
+
+// Reader traits
+class BatchPNGReader;
+struct BatchPNGIterator;
+template<> struct traits <BatchPNGReader>
+{
+    typedef BatchPNGIterator iterator;
+    typedef std::pair<int, std::string> data_t;
+	typedef Tensor<float, 3> out_data_t;
+	typedef Tensor<float, 2> out_label_t;
+};
+
+class BatchCSVReader;
+struct BatchCSVIterator;
+template<> struct traits <BatchCSVReader>
+{
+    typedef BatchCSVIterator iterator;
+    typedef std::pair<Index, Index> data_t;
+    typedef Tensor<float, 2> out_data_t;
+    typedef Tensor<float, 2> out_label_t;
+};
+
 
 
 

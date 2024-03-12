@@ -1,11 +1,12 @@
-#ifndef BATCH_READER
-#define BATCH_READER
+#ifndef BATCH_READER_PNG
+#define BATCH_READER_PNG
 
 #include <filesystem>
 #include <random>
 #include <exception>
 #include "typedefs.h"
 #include "utils.h"
+#include "batchReader.h"
 
 namespace fs = std::filesystem;
 
@@ -44,9 +45,11 @@ void imread_bulk(ptr_t* begin, ptr_t* end, Tensor<byte, 3>& images){
 struct BatchPNGIterator
 {
 
-	typedef Tensor<float, 3> out_data_t;
-	typedef Tensor<float, 2> out_label_t;
-	typedef std::pair<int, std::string> it_t;
+	//typedef Tensor<float, 3> out_data_t;
+	//typedef Tensor<float, 2> out_label_t;
+	typedef traits<BatchPNGReader>::out_data_t out_data_t;
+	typedef traits<BatchPNGReader>::out_label_t out_label_t;
+	typedef traits<BatchPNGReader>::data_t it_t;
 
 	BatchPNGIterator(it_t* begin, Index batch, int num_labels)
 		:_begin{ begin }, _batch{ batch }, _num_labels{ num_labels },
@@ -95,7 +98,6 @@ struct BatchPNGIterator
 	}
 
 private:
-	int _test{ 0 };
 	it_t* _begin;
 	Index _batch;
 	int _num_labels;
@@ -103,26 +105,16 @@ private:
 	Tensor<float, 2> _labels;
 };
 
-class BatchPNGReader
+class BatchPNGReader: public BatchReader<BatchPNGReader>
 {
-	typedef BatchPNGIterator it;
-	typedef std::pair<int, std::string> data_t;
-	std::mt19937 _gen;
 	std::string _ext = ".png";
 	std::string _parent_dir;
-	std::vector<data_t> _path_arr;
-
-	data_t* _data;
-	Index _batch;
-	Eigen::Index _total_size;
 	int _labels{ 0 };
 
 public:
-	typedef it::out_data_t out_data_t;
-	typedef it::out_label_t out_label_t;
 
 	BatchPNGReader(std::string& dir, Index batch)
-		:_parent_dir{ dir }, _batch{ batch }
+		:BatchReader<BatchPNGReader>(batch), _parent_dir{ dir }
 	{
 		std::random_device rd{};
 		_gen = std::mt19937{ rd() };
@@ -149,25 +141,7 @@ public:
 		std::shuffle(_path_arr.begin(), _path_arr.end(), _gen);
 	}
 
-	BatchPNGIterator begin() { return BatchPNGIterator(_data, _batch, _labels); }
-	BatchPNGIterator end() {
-		// address used to stop iteration
-		int misal = _total_size % _batch;
-		int last_idx = misal == 0 ? _total_size : _total_size - _batch + misal;
-		return BatchPNGIterator(_data + last_idx, _batch, _labels);
-	}
-
-	void reset() {
-		std::shuffle(_path_arr.begin(), _path_arr.end(), _gen);
-	}
-
-	Eigen::Index batch() {
-		return _batch;
-	}
-
-	Eigen::Index size() {
-		return _total_size;
-	}
+	BatchPNGIterator iter(data_t* data, Index batch) { return BatchPNGIterator(data, batch, _labels); }
 };
 
 #endif
