@@ -130,7 +130,6 @@ void testReadBatchCSV(std::string& data_dir) {
         n_images << "\n\n";
     label_t label_batch;
     data_t image_batch;
-    //batch_reader.get(label_batch, image_batch);
     auto begin = batch_reader.begin();
     label_batch = begin.labels();
     image_batch = begin.data();

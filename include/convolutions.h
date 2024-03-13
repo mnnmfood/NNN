@@ -91,7 +91,8 @@ convolveBatch(const ArgType& input, KerType& kernels){
 
 template<typename ArgType1, typename ArgType2>
 inline static const
-TensorReshapingOp<const DSizes<Index, internal::traits<ArgType1>::NumDimensions - 1>,
+TensorReverseOp<const DSizes< bool, internal::traits<ArgType1>::NumDimensions - 1>,
+const TensorReshapingOp<const DSizes<Index, internal::traits<ArgType1>::NumDimensions - 1>,
     const TensorContractionOp<const array<IndexPair<Index>, 1>,
 		const TensorReshapingOp<const DSizes<Index, 2>,
 			const TensorImagePatchOp<-1, -1,
@@ -104,7 +105,7 @@ TensorReshapingOp<const DSizes<Index, internal::traits<ArgType1>::NumDimensions 
 		const TensorForcedEvalOp<
 			const TensorShufflingOp<
 				const DSizes<Index, internal::traits<ArgType1>::NumDimensions>,
-				const ArgType1>>>>>
+				const ArgType1>>>>>>
 backwardsConvolveInput(const ArgType1& grad, const ArgType2& kernels,
     Index& input_r, Index& input_c){
     typedef typename internal::traits<ArgType1>::Index TensorIndex;
@@ -159,6 +160,7 @@ backwardsConvolveInput(const ArgType1& grad, const ArgType2& kernels,
     out_shape[1] = input_r;
     out_shape[2] = input_c;
     out_shape[3] = batch;
+    const DSizes<bool, 4> out_reverse{ false, true, true, false };
 
     auto kernels_reversed = kernels.reverse(kern_reverse)
         .reshape(kern_shape);
@@ -167,14 +169,14 @@ backwardsConvolveInput(const ArgType1& grad, const ArgType2& kernels,
         .reshape(grad_contract_shape);
 
     return kernels_reversed
-            .extract_image_patches(gradr, gradc, 1, 1,
-                1, 1, 1, 1,
-                padr, padr, padc, padc,
-                OutScalar(0))
-            .reshape(kern_contract_shape)
+        .extract_image_patches(gradr, gradc, 1, 1,
+            1, 1, 1, 1,
+            padr, padr, padc, padc,
+            OutScalar(0))
+        .reshape(kern_contract_shape)
         .contract(grad_reshaped,
             contract_dims)
-        .reshape(out_shape);
+        .reshape(out_shape).reverse(out_reverse);
 }
 
 template<typename ArgType1, typename ArgType2>

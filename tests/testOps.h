@@ -83,14 +83,12 @@ void testBackwardsInput(int im_size, int batch, int ker_size, int ker_depth, Thr
 							int outc = ic - kc;
 							if (outr >= 0 && outr < out_size &&
 								outc >= 0 && outc < out_size) {
-								std::cout << kr << ", " << kc << ";";
-								std::cout << outr << ", " << outc << "\n";
 								expected +=
 									output(0, outr, outc, dk, b) * kernel(dk, 0, kr, kc);
 							}
 						}
 					}
-					//AssertAprox(input(0, ir, ic, b), expected, "convolution");
+					AssertAprox(input(0, ir, ic, b), expected, "backwards input");
 				}
 			}
 		}
@@ -103,8 +101,8 @@ void testAllOps() {
         const int thread_n{ 4 };
         ThreadPool pool(pool_n);
         ThreadPoolDevice device(&pool, thread_n);
-		//testConvoution(10, 1, 1, 3, 1, &device);
-		testBackwardsInput(3, 1, 2, 1, &device);
+		testConvoution(10, 1, 1, 3, 1, &device);
+		testBackwardsInput(10, 1, 3, 1, &device);
 }
 
 #endif

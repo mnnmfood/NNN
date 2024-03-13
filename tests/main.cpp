@@ -24,8 +24,6 @@
 
 int main() {
 
-    testAllOps();
-#if 0
     std::string dataDir = xstr(DATA_DIR);
     std::cout << " --TESTING PNG" << "\n";
     testPNG(dataDir);
@@ -40,26 +38,24 @@ int main() {
     testFeedFwd();
     std::cout << "--TESTING Backwards-propagation" << "\n";
     testBackProp();
+    std::cout << "--TESTING Convolution Ops" << "\n";
+    testAllOps();
+
     // model architecture
     Sequential2 model({
-        //new ReshapeLayer<2, 4>(std::array<Index, 4>{1, 28, 28, 1}),
-        //new ConvolLayer(std::array<Index, 3>{5, 3, 3}),
-        //new PoolingLayer(std::array<Index, 2>{3, 3}, 3),
-        //new ConvolLayer(std::array<Index, 3>{5, 3, 3}),
-        //new PoolingLayer(std::array<Index, 2>{3, 3}, 3),
+        new ReshapeLayer<1, 4>(std::array<Index, 4>{1, 28, 28, 1}),
+        new ConvolLayer(std::array<Index, 3>{5, 3, 3}),
+        new PoolingLayer(std::array<Index, 2>{3, 3}, 3),
         new FlattenLayer(),
-        new SigmoidLayer(128),
         new SigmoidLayer(10),
         }
         , new MSE(),
         std::array<Index, 1>{784},
         std::array<Index, 1>{10});
 
-
-
     std::cout << "--TESTING Mnist Data" << "\n";
-    int epochs = 100;
-    int batch_size = 20;
+    int epochs = 4;
+    int batch_size = 100;
     float learning_rate = 0.1;
     float momentum = 0.0;
     std::string trainDir = dataDir + "mnist_png/training";
@@ -81,5 +77,4 @@ int main() {
     std::cout << std::setprecision(2);
     std::cout << "Final accuracy " << model.accuracy(test_reader) * 100;
     std::cout << "%" << "\n\n";
-#endif
 }
