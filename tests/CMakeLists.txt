@@ -1,4 +1,4 @@
-add_executable(tests main.cpp)
+add_executable(tests main.cpp "testOps.h")
 find_library(PNG_LIB_PATH libpng)
 find_library(Z_LIB_PATH zlib)
 cmake_print_variables(PNG_LIB_PATH)

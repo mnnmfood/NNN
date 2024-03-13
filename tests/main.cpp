@@ -13,6 +13,7 @@
 
 #include "tests.h"
 #include "pngTests.h"
+#include "testOps.h"
 
 #define xstr(x) str(x)
 #define str(x) #x
@@ -22,6 +23,9 @@
 #endif
 
 int main() {
+
+    testAllOps();
+#if 0
     std::string dataDir = xstr(DATA_DIR);
     std::cout << " --TESTING PNG" << "\n";
     testPNG(dataDir);
@@ -77,4 +81,5 @@ int main() {
     std::cout << std::setprecision(2);
     std::cout << "Final accuracy " << model.accuracy(test_reader) * 100;
     std::cout << "%" << "\n\n";
+#endif
 }
