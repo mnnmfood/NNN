@@ -3,17 +3,13 @@
 #include "typedefs.h"
 #include "layers.h"
 #include "utils.h"
+#include "layer_activations.h"
 #include "convolutions.h"
 #include "max_poling.h"
-
-scalar_comparer_op<float> min_comparer([](float x, float y)->float {return x < y ? x: y;});
-scalar_comparer_op<float> max_comparer([](float x, float y)->float {return x > y ? x: y;});
 
 inline const Eigen::array<Eigen::IndexPair<int>, 1> product_dims = 
   {Eigen::IndexPair<int>(1, 0) };
 
-inline const Eigen::array<bool, 4> reverse_dims {true, true, 
-                                                false, false};
 // Util class for weight initialization
 class NormalSample
 {
@@ -22,39 +18,6 @@ public:
     NormalSample() = delete;
     NormalSample(float _mean, float _std): nd(_mean, _std){}
     float operator()(float z) {return static_cast<float>(nd(gen));}
-};
-
-// helper functions
-float logistic(float z){
-    return 1.0f / (1.0f + std::exp(-z));
-}
-
-float logistic_prime(float z){
-    float log = 1.0 / (1.0 + std::exp(-z));
-    return (1.0 - log)*log;
-}
-
-float tanhc(float z){
-    return std::tanh(z);
-}
-
-float tanh_prime(float z){
-    float th = std::tanh(z);
-    return 1.0 - th * th;
-}
-
-float usrLog(float z){
-    return std::log(z);
-}
-
-class usrExp
-{
-    float m{};
-public:
-    usrExp(float i) :m{i}{}
-    float operator()(float z) const{
-        return std::exp(z - m);
-    }
 };
 
  // Generic Layer
@@ -97,21 +60,26 @@ void FCLayer::fwd(ThreadPoolDevice* device){
     assert(_prev != nullptr);
     _winputs = vecSum(_weights.contract(prev_act(), 
         product_dims), _biases, false);
-    Tensor<float, 2> temp = act(_winputs);
-    _act = act(_winputs);
+    act(_winputs, _act, device);
 }
 
 void FCLayer::fwd(TensorWrapper<float>&&, ThreadPoolDevice* device){}
 void FCLayer::bwd(TensorWrapper<float>&& cost_grad, ThreadPoolDevice* device){
     assert(_next == nullptr);
-    _nabla_b = cost_grad.get(_out_batch_shape) * grad_act(_winputs);
+    Tensor<float, 2> temp(_winputs.dimensions());
+    grad_act(_winputs, temp, device);
+    _nabla_b = cost_grad.get(_out_batch_shape) * temp;
+    //_nabla_b = cost_grad.get(_out_batch_shape) * grad_act(_winputs);
     _nabla_w = _nabla_b.contract(transposed(prev_act()), product_dims);
     _grad = transposed(_weights).contract(_nabla_b, product_dims);
 }
 
 void FCLayer::bwd(ThreadPoolDevice* device){
     assert(_next != nullptr);
-    _nabla_b = next_grad() * grad_act(_winputs);
+    Tensor<float, 2> temp(_winputs.dimensions());
+    grad_act(_winputs, temp, device);
+    _nabla_b = next_grad() * temp;
+    //_nabla_b = next_grad() * grad_act(_winputs);
     _nabla_w = _nabla_b.contract(
         transposed(prev_act()), product_dims);
 
@@ -122,54 +90,36 @@ void FCLayer::bwd(ThreadPoolDevice* device){
 // Sigmoid layer
 SigmoidLayer::SigmoidLayer(Index size) :FCLayer{size}{}
 
-Tensor<float, 2> SigmoidLayer::act(const Tensor<float, 2>& z){
-    return z.unaryExpr(std::ref(logistic));
+void
+SigmoidLayer::act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
+    sigmoid_fun(z, out, device);
 }
 
-Tensor<float, 2> SigmoidLayer::grad_act(const Tensor<float, 2>& z){
-    return z.unaryExpr(std::ref(logistic_prime));
+void
+SigmoidLayer::grad_act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
+    sigmoid_grad_fun(z, out, device);
 }
 
 // Tanh Layer
-Tensor<float, 2> TanhLayer::act(const Tensor<float, 2>& z){
-    return z.unaryExpr(std::ref(tanhc));
+void
+TanhLayer::act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
+    tanh_fun(z, out, device);
 }
 
-Tensor<float, 2> TanhLayer::grad_act(const Tensor<float, 2>& z){
-    return z.unaryExpr(std::ref(tanh_prime));
+void
+TanhLayer::grad_act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
+    tanh_grad_fun(z, out, device);
 }
 
 // SoftMax Layer
-Tensor<float, 2> SoftMaxLayer::act(const Tensor<float, 2>& z){
-    Tensor<float, 1> temp_max = z.reduce(dims_colwise, max_comparer);
-    Tensor<float, 2> temp_exp{z.dimension(0), z.dimension(1)};
-
-    for(int i{0}; i < z.dimension(1); i++){
-        temp_exp.chip(i, 1) = z.chip(i, 1).unaryExpr(usrExp(temp_max(i)));
-    }
-
-    Tensor<float, 1> temp_sum = temp_exp.sum(dims_colwise).unaryExpr(std::ref(usrLog));
-    Tensor<float, 2> res(z.dimension(0), z.dimension(1));
-    for(int i{0}; i < res.dimension(1); i++){
-        res.chip(i, 1) = z.chip(i, 1).unaryExpr(usrExp(temp_sum(i) + temp_max(i)));
-    }
-    return res;
+void
+SoftMaxLayer::act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
+    softmax_fun(z, out, device);
 }
 
-Tensor<float, 2> SoftMaxLayer::grad_act(const Tensor<float, 2>& z){
-    Tensor<float, 1> temp_max = z.reduce(dims_colwise, max_comparer);
-    Tensor<float, 2> temp_exp{z.dimension(0), z.dimension(1)};
-
-    for(int i{0}; i < z.dimension(1); i++){
-        temp_exp.chip(i, 1) = z.chip(i, 1).unaryExpr(usrExp(temp_max(i)));
-    }
-
-    Tensor<float, 1> temp_sum = temp_exp.sum(dims_colwise).unaryExpr(std::ref(usrLog));
-    Tensor<float, 2> res(z.dimension(0), z.dimension(1));
-    for(int i{0}; i < res.dimension(1); i++){
-        res.chip(i, 1) = z.chip(i, 1).unaryExpr(usrExp(temp_sum(i) + temp_max(i)));
-    }
-    return  res - res * res; 
+void
+SoftMaxLayer::grad_act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
+    softmax_grad_fun(z, out, device);
 }
 
 // Convolutional layer

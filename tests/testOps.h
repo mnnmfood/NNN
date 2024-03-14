@@ -3,8 +3,10 @@
 
 #include <string>
 #include <string_view>
+#include <cmath>
 #include "typedefs.h"
 #include "convolutions.h"
+#include "layer_activations.h"
 
 
 static constexpr float TestPrecision = 1e-3;
@@ -26,8 +28,6 @@ void testConvoution(int im_size, int depth, int batch, int ker_size, int ker_dep
 	kernel.setRandom();
 	Tensor<float, 5> output(1, out_size, out_size, out_depth, batch);
 
-	//Tensor<float, 5> expected(1, out_size, out_size, out_depth, batch);
-	//expected.setConstant(0.0f);
 	output.device(*device) = Eigen::convolveBatch(input, kernel);
 
 	for (int b{ 0 }; b < batch; b++) {
@@ -65,32 +65,142 @@ void testBackwardsInput(int im_size, int batch, int ker_size, int ker_depth, Thr
 	Tensor<float, 5> output(1, out_size, out_size, out_depth, batch);
 	output.setRandom();
 
-	//Tensor<float, 5> expected(1, out_size, out_size, out_depth, batch);
-	//expected.setConstant(0.0f);
 	Index im_size_ind = static_cast<Index>(im_size);
 	input.device(*device) = Eigen::backwardsConvolveInput(output, kernel, im_size_ind, im_size_ind);
 
 	for (int b{ 0 }; b < batch; b++) {
-		for (int dk{ 0 }; dk < ker_depth; dk++) {
-			for (int ir {0}; ir < im_size; ir ++) {
-				for (int ic {0}; ic < im_size; ic ++) {
-					float expected = 0.0f;
-					for (int kr{ 0 }; kr < ker_size; kr++) {
-						for (int kc{ 0 }; kc < ker_size; kc++) {
-							//int rkr = std::abs(kr - ker_size);
-							//int rkc = std::abs(kc - ker_size);
-							int outr = ir - kr;
-							int outc = ic - kc;
-							if (outr >= 0 && outr < out_size &&
-								outc >= 0 && outc < out_size) {
+		for (int ir {0}; ir < im_size; ir ++) {
+			for (int ic {0}; ic < im_size; ic ++) {
+				float expected = 0.0f;
+				for (int kr{ 0 }; kr < ker_size; kr++) {
+					for (int kc{ 0 }; kc < ker_size; kc++) {
+						int outr = ir - kr;
+						int outc = ic - kc;
+						if (outr >= 0 && outr < out_size &&
+							outc >= 0 && outc < out_size) {
+							for (int dk{ 0 }; dk < ker_depth; dk++) {
 								expected +=
 									output(0, outr, outc, dk, b) * kernel(dk, 0, kr, kc);
 							}
 						}
 					}
-					AssertAprox(input(0, ir, ic, b), expected, "backwards input");
 				}
+				AssertAprox(input(0, ir, ic, b), expected, "backwards input");
 			}
+		}
+	}
+}
+
+void testBackwardsKernel(int im_size, int batch, int ker_size, int ker_depth, ThreadPoolDevice* device) {
+	int out_size = im_size - ker_size + 1;
+	int out_depth = ker_depth;
+	Tensor<float, 4> input(1, im_size, im_size, batch);
+	input.setRandom();
+	Tensor<float, 4> kernel(ker_depth, 1, ker_size, ker_size);
+	kernel.setConstant(0.0f);
+	Tensor<float, 5> output(1, out_size, out_size, out_depth, batch);
+	output.setRandom();
+
+	Index ker_size_ind = static_cast<Index>(ker_size);
+	kernel.device(*device) = Eigen::backwardsConvolveKernel(input, output, ker_size_ind, ker_size_ind);
+
+	for (int d{ 0 }; d < ker_depth; d++) {
+		for (int kr {0}; kr < ker_size; kr ++) {
+			for (int kc {0}; kc < ker_size; kc ++) {
+				float expected = 0.0f;
+				int startr = kr;
+				int endr = kr + out_size;
+				int startc = kc;
+				int endc = kc + out_size;
+				for (int ir{ startr }, outr{ 0 }; ir < endr; ir++, outr++) {
+					for (int ic{ startc }, outc{ 0 }; ic < endc; ic++, outc++) {
+						for (int b{ 0 }; b < batch; b++) {
+							expected +=
+								input(0, ir, ic, b) * output(0, outr, outc, d, b);
+						}
+					}
+				}
+				AssertAprox(kernel(d, 0, kr, kc), expected, "convolution");
+			}
+		}
+	}
+}
+
+void testSoftMax(int size, int batch, ThreadPoolDevice* device) {
+	Tensor<float, 2> input(size, batch);
+	input.setRandom();
+	Tensor<float, 2> output(size, batch);
+	softmax_fun(input, output, device);
+	for (int b{ 0 }; b < batch; b++) {
+		float sum = 0;
+		for (int i{ 0 }; i < size; i++) {
+			sum += std::exp(input(i, b));
+		}
+		for (int i{ 0 }; i < size; i++) {
+			float expected = std::exp(input(i, b)) / sum;
+			AssertAprox(output(i, b), expected, "softmax");
+		}
+	}
+
+	softmax_grad_fun(input, output, device);
+
+	for (int b{ 0 }; b < batch; b++) {
+		float sum = 0;
+		for (int i{ 0 }; i < size; i++) {
+			sum += std::exp(input(i, b));
+		}
+		for (int i{ 0 }; i < size; i++) {
+			float softmax = std::exp(input(i, b)) / sum;
+			float expected = softmax - softmax * softmax;
+			AssertAprox(output(i, b), expected, "softmax");
+		}
+	}
+
+}
+
+void testSigmoid(int size, int batch, ThreadPoolDevice* device) {
+	Tensor<float, 2> input(size, batch);
+	input.setRandom();
+	Tensor<float, 2> output(size, batch);
+	sigmoid_fun(input, output, device);
+	for (int b{ 0 }; b < batch; b++) {
+		for (int i{ 0 }; i < size; i++) {
+			float expected = 1.0f / (1.0f + std::exp(-input(i, b)));
+			AssertAprox(output(i, b), expected, "sigmoid");
+		}
+	}
+
+	sigmoid_grad_fun(input, output, device);
+
+	for (int b{ 0 }; b < batch; b++) {
+		for (int i{ 0 }; i < size; i++) {
+			float expected = 1.0f / (1.0f + std::exp(-input(i, b)));
+			expected = expected * (1 - expected);
+			AssertAprox(output(i, b), expected, "sigmoid grad");
+		}
+	}
+
+}
+
+void testTanh(int size, int batch, ThreadPoolDevice* device) {
+	Tensor<float, 2> input(size, batch);
+	input.setRandom();
+	Tensor<float, 2> output(size, batch);
+	tanh_fun(input, output, device);
+	for (int b{ 0 }; b < batch; b++) {
+		for (int i{ 0 }; i < size; i++) {
+			float expected = std::tanh(input(i, b));
+			AssertAprox(output(i, b), expected, "tanh");
+		}
+	}
+
+	tanh_grad_fun(input, output, device);
+
+	for (int b{ 0 }; b < batch; b++) {
+		for (int i{ 0 }; i < size; i++) {
+			float expected = std::tanh(input(i, b));
+			expected = 1 - expected * expected;
+			AssertAprox(output(i, b), expected, "tanh grad");
 		}
 	}
 }
@@ -101,8 +211,18 @@ void testAllOps() {
         const int thread_n{ 4 };
         ThreadPool pool(pool_n);
         ThreadPoolDevice device(&pool, thread_n);
-		testConvoution(10, 1, 1, 3, 1, &device);
-		testBackwardsInput(10, 1, 3, 1, &device);
+		int im_size{ 10 }, im_depth{ 3 }, batch{ 10 };
+		int ker_size{ 10 }, ker_depth{ 3 };
+		//testConvoution(im_size, im_depth, batch, ker_size, ker_depth, &device);
+		//testBackwardsInput(im_size, batch, ker_size, ker_depth, &device);
+		//testBackwardsKernel(im_size, batch, ker_size, ker_depth, &device);
+		
+		int size{ 5 };
+		batch = 10;
+		testSoftMax(size, batch, &device);
+		testSigmoid(size, batch, &device);
+		testTanh(size, batch, &device);
+		std::cout << "Sucess\n";
 }
 
 #endif

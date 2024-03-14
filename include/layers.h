@@ -292,8 +292,8 @@ public:
     void fwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr);
     void bwd(TensorWrapper<float>&&, ThreadPoolDevice* device=nullptr);
 
-    virtual Tensor<float, 2> act(const Tensor<float, 2>&) = 0;
-    virtual Tensor<float, 2> grad_act(const Tensor<float, 2>&) = 0;
+    virtual void act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*) = 0;
+    virtual void grad_act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*) = 0;
 
     virtual ~FCLayer() = default;
 };
@@ -302,22 +302,22 @@ class SigmoidLayer: public FCLayer
 {
 public:
     SigmoidLayer(Index size); 
-    Tensor<float, 2> act(const Tensor<float, 2>&);
-    Tensor<float, 2> grad_act(const Tensor<float, 2>&);
+    void act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
+    void grad_act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
 };
 
 class TanhLayer: public FCLayer
 {
 public:
-    Tensor<float, 2> act(const Tensor<float, 2>&);
-    Tensor<float, 2> grad_act(const Tensor<float, 2>&);
+    void act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
+    void grad_act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
 };
 
 class SoftMaxLayer: public FCLayer
 {
 public:
-    Tensor<float, 2> act(const Tensor<float, 2>&);
-    Tensor<float, 2> grad_act(const Tensor<float, 2>&);
+    void act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
+    void grad_act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
 };
 
 class ConvolLayer:public Layer<ConvolLayer>
