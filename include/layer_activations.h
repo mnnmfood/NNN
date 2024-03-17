@@ -38,9 +38,11 @@ void tanh_grad_fun(const Tensor<Scalar, 2>& input, Tensor<float, 2>& output, Thr
     output.device(*device) = (Scalar(1.0f) - output * output).eval();
 }
 
-template<typename Scalar>
+template<typename ArgType1, typename ArgType2>
 void
-softmax_fun(const Tensor<Scalar, 2>& input, Tensor<Scalar, 2>& output, ThreadPoolDevice* device) {
+softmax_fun(ArgType1& input, ArgType2& output, ThreadPoolDevice* device) {
+    assert(internal::traits<ArgType1>::NumDimensions == 2);
+    assert(internal::traits<ArgType2>::NumDimensions == 2);
     const DSizes<Index, 1> along_batch{ 0 };
     const DSizes<Index, 2> reshape_dims{ 1, input.dimension(1) };
     const DSizes<Index, 2> batch_dims{ input.dimension(0), 1 };

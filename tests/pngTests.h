@@ -84,7 +84,6 @@ void testConvolve(std::string& data_dir) {
         new ConvolLayer(std::array<Index, 3>{1, 3, 3})
         //new ReshapeLayer<4, 2>(std::array<Index, 2>{26, 26})
         },
-        new MSE(),
         std::array<Index, 1> {784}, std::array<Index, 2>{26, 26}
 	);
 

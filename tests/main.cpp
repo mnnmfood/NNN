@@ -23,9 +23,9 @@
 #endif
 
 int main() {
-
-    testAllOps();
     std::string dataDir = xstr(DATA_DIR);
+
+#if 1
     std::cout << " --TESTING PNG" << "\n";
     testPNG(dataDir);
 
@@ -40,7 +40,9 @@ int main() {
     std::cout << "--TESTING Backwards-propagation" << "\n";
     testBackProp();
     std::cout << "--TESTING Convolution Ops" << "\n";
+    testAllOps();
 
+#endif
     // model architecture
     Sequential2 model({
         //new ReshapeLayer<1, 4>(std::array<Index, 4>{1, 28, 28, 1}),
@@ -49,15 +51,15 @@ int main() {
         new FlattenLayer(),
         new SigmoidLayer(128),
         new SigmoidLayer(10),
-        }
-        , new CrossEntropy(true),
+        },
         std::array<Index, 1>{784},
-        std::array<Index, 1>{10});
-
+        std::array<Index, 1>{10},
+        new CrossEntropy()
+    );
     std::cout << "--TESTING Mnist Data" << "\n";
-    int epochs = 4;
-    int batch_size = 100;
-    float learning_rate = 0.5;
+    int epochs = 10;
+    int batch_size = 20;
+    float learning_rate = 0.1;
     float momentum = 0.0;
     std::string trainDir = dataDir + "mnist_png/training";
     std::string testDir = dataDir + "mnist_png/testing";

@@ -5,33 +5,49 @@
 #include <costs.h>
 #include "eigenFuns.h"
 #include "typedefs.h"
+#include "cost_funs.h"
+#include "layer_activations.h"
 
 inline const std::array<int, 1> dims {0};
 
-Tensor<float, 0> MSE::cost(const Tensor<float, 2>& a, 
-                const Tensor<float, 2>& y){
-    //return (a-y).colwise().squaredNorm().sum();
-    return (a-y).reduce(dims, SqNormReducer<float>()).sum();
+Tensor<float, 0> MSE::cost(tmap_t a, 
+                tmap_t y, ThreadPoolDevice* device){
+    return mse_fun(a, y, device);
 }
 
-Tensor<float, 2> MSE::grad(
-        const Tensor<float, 2>& a,
-        const Tensor<float, 2>& y){
-    return (a - y);
+void MSE::grad(
+        tmap_t a,
+        tmap_t y,
+        tmap_t grad,
+        ThreadPoolDevice* device){
+    mse_grad_fun(a, y, grad, device);
 }
 
-float cross_entropy(float a, float y){
-    return y*std::log(a) + (1 - y)*std::log(1 - a);
+void MSE::act(tmap_t z, 
+    tmap_t act, ThreadPoolDevice* device){
+    act = z;
 }
 
-
-Tensor<float, 0> CrossEntropy::cost(const Tensor<float, 2>& a, 
-            const Tensor<float, 2>& y){
-    return -a.binaryExpr(y, std::ref(cross_entropy)).sum();
+Tensor<float, 0> CrossEntropy::cost(tmap_t a, 
+            tmap_t y, ThreadPoolDevice* device){
+    return cross_entropy_fun(a, y, device);
+    //return -a.binaryExpr(y, std::ref(cross_entropy)).sum();
 }
 
-Tensor<float, 2> CrossEntropy::grad(
-    const Tensor<float, 2>& a,
-    const Tensor<float, 2>& y){ 
-    return a - y;
+void CrossEntropy::grad(tmap_t a,
+    tmap_t y, tmap_t grad,
+    ThreadPoolDevice* device){ 
+    cross_entropy_grad_fun(a, y, grad, device);
+    //std::cout << a.chip(0, 1) << "\n\n";
+    //std::cout << y.chip(0, 1) << "\n\n";
+    //std::cout << grad.chip(0, 1) << "\n\n";
+}
+
+void CrossEntropy::act(tmap_t z, 
+    tmap_t act, ThreadPoolDevice* device) {
+    softmax_fun(z, act, device);
+    //std::cout << z.dimensions() << "\n\n";
+    //std::cout << z.chip(0, 1) << "\n\n";
+    //std::cout << act.chip(0, 1) << "\n\n";
+    //act = z;
 }

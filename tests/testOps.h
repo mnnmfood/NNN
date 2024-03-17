@@ -7,6 +7,7 @@
 #include "typedefs.h"
 #include "convolutions.h"
 #include "layer_activations.h"
+#include "cost_funs.h"
 
 
 static constexpr float TestPrecision = 1e-3;
@@ -205,6 +206,77 @@ void testTanh(int size, int batch, ThreadPoolDevice* device) {
 	}
 }
 
+void testMSE(int size, int batch, ThreadPoolDevice* device) {
+	Tensor<float, 2> input(size, batch);
+	input.setRandom();
+	Tensor<float, 2> output(size, batch);
+	output.setRandom();
+	Tensor<float, 0> cost;
+	cost.device(*device) = mse_fun(input, output, device);
+	float expected = 0;
+	for (int b{ 0 }; b < batch; b++) {
+		float accum = 0;
+		for (int i{ 0 }; i < size; i++) {
+			float x = input(i, b);
+			float y = output(i, b);
+			accum += (y - x) * (y - x);
+		}
+		expected += std::sqrt(accum);
+	}
+	AssertAprox(cost(0), expected, "MSE");
+	
+	Tensor<float, 2> grad(size, batch);
+	mse_grad_fun(input, output, grad, device);
+
+	for (int b{ 0 }; b < batch; b++) {
+		for (int i{ 0 }; i < size; i++) {
+			float x = input(i, b);
+			float y = output(i, b);
+			expected = x - y;
+			AssertAprox(grad(i, b), expected, "MSE grad");
+		}
+	}
+
+}
+
+void testCrossEntropy(int size, int batch, ThreadPoolDevice* device) {
+	Tensor<float, 2> input(size, batch);
+	input.setRandom();
+	Tensor<float, 2> output(size, batch);
+	output.setRandom();
+	Tensor<float, 0> cost;
+	cost.device(*device) = cross_entropy_fun(input, output, device);
+	float expected = 0;
+	for (int b{ 0 }; b < batch; b++) {
+		float sum = 0;
+		for (int i{ 0 }; i < size; i++) {
+			sum += std::exp(input(i, b));
+		}
+		for (int i{ 0 }; i < size; i++) {
+			//float x = input(i, b);
+			float y = output(i, b);
+			float x = std::exp(input(i, b)) / sum;
+			expected += -y * std::log(x) + (y - 1) * std::log(1 - x);
+		}
+	}
+	AssertAprox(cost(0), expected, "MSE");
+
+	Tensor<float, 2> grad1(size, batch);
+	cross_entropy_grad_fun(input, output, grad1, device, true);
+	Tensor<float, 2> grad2(size, batch);
+	cross_entropy_grad_fun(input, output, grad2, device, false);
+	for (int b{ 0 }; b < batch; b++) {
+		for (int i{ 0 }; i < size; i++) {
+			float x = input(i, b);
+			float y = output(i, b);
+			expected = x - y;
+			AssertAprox(grad1(i, b), expected, "MSE grad");
+			expected = (1 - y) / (1 - x) - y / x;
+			AssertAprox(grad2(i, b), expected, "MSE grad");
+		}
+	}
+}
+
 void testAllOps() {
 
         const int pool_n{ 8 };
@@ -213,15 +285,18 @@ void testAllOps() {
         ThreadPoolDevice device(&pool, thread_n);
 		int im_size{ 10 }, im_depth{ 3 }, batch{ 10 };
 		int ker_size{ 10 }, ker_depth{ 3 };
-		//testConvoution(im_size, im_depth, batch, ker_size, ker_depth, &device);
-		//testBackwardsInput(im_size, batch, ker_size, ker_depth, &device);
-		//testBackwardsKernel(im_size, batch, ker_size, ker_depth, &device);
+		testConvoution(im_size, im_depth, batch, ker_size, ker_depth, &device);
+		testBackwardsInput(im_size, batch, ker_size, ker_depth, &device);
+		testBackwardsKernel(im_size, batch, ker_size, ker_depth, &device);
 		
 		int size{ 5 };
 		batch = 10;
 		testSoftMax(size, batch, &device);
 		testSigmoid(size, batch, &device);
 		testTanh(size, batch, &device);
+
+		testMSE(size, batch, &device);
+		testCrossEntropy(size, batch, &device);
 		std::cout << "Sucess\n";
 }
 

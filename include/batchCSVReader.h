@@ -49,7 +49,7 @@ struct BatchCSVIterator
 	friend bool operator==(BatchCSVIterator& a, BatchCSVIterator& b) { return a._begin == b._begin; }
 	friend bool operator!=(BatchCSVIterator& a, BatchCSVIterator& b) { return a._begin != b._begin; }
 	
-	const out_label_t& labels() {
+	out_label_t& labels() {
 		for (Index i{ 0 }; i < _batch; i++) {
 			it_t* it = _begin + i;
 			read_line(_labels.data() + i * _num_labels, _label_file, it->first);
@@ -57,7 +57,7 @@ struct BatchCSVIterator
 		return _labels;
 	}
 
-	const out_data_t& data() {
+	out_data_t& data() {
 		for (Index i{ 0 }; i < _batch; i++) {
 			it_t* it = _begin + i;
 			read_line(_data.data() + i * _num_data, _data_file, it->second);

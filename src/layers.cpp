@@ -77,7 +77,11 @@ void FCLayer::bwd(TensorWrapper<float>&& cost_grad, ThreadPoolDevice* device){
 void FCLayer::bwd(ThreadPoolDevice* device){
     assert(_next != nullptr);
     Tensor<float, 2> temp(_winputs.dimensions());
+    temp.setConstant(0.0f);
     grad_act(_winputs, temp, device);
+    //std::cout << temp.chip(0, 1)<< "\n\n";
+    //Tensor<float, 2> test = next_grad();
+    //std::cout << test.chip(0, 1)<< "\n\n";
     _nabla_b = next_grad() * temp;
     //_nabla_b = next_grad() * grad_act(_winputs);
     _nabla_w = _nabla_b.contract(

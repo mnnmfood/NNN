@@ -11,18 +11,15 @@
 
 namespace fs = std::filesystem;
 
-void printShape(const Matrix<float, Dynamic, Dynamic>& a){ 
-    std::cout << " Shape: (" << a.rows() << ", " << a.cols() << ")\n";
-}
-
 void testSequentialInit(){
     Sequential2 model({
         new SigmoidLayer(30), 
         new SigmoidLayer(10)
-        }
-        , new MSE(),
+        },
         std::array<Index, 1>{784},
-        std::array<Index, 1>{10});
+        std::array<Index, 1>{10},
+        new MSE()
+    );
 
     size_t n_samples = 10;
     model.init(n_samples);
@@ -33,10 +30,11 @@ void testFeedFwd(){
     Sequential2 model({
         new SigmoidLayer(30), 
         new SigmoidLayer(10)
-        }
-        , new MSE(),
+        },
         std::array<Index, 1>{2},
-        std::array<Index, 1>{10});
+        std::array<Index, 1>{10},
+        new MSE()
+    );
 
     Eigen::Tensor<float, 2> x(2, 10);
     //Eigen::VectorXf xi {{5, 3}};
@@ -57,10 +55,11 @@ void testBackProp(){
         new PoolingLayer(std::array<Index, 2>({2, 2}), 1),
         new FlattenLayer(),
         new SigmoidLayer(8)
-        }
-        , new MSE(),
+        },
         in_shape,
-        out_shape);
+        out_shape,
+        new MSE()
+    );
 
     int n_samples {2};
 

@@ -45,8 +45,6 @@ void imread_bulk(ptr_t* begin, ptr_t* end, Tensor<byte, 3>& images){
 struct BatchPNGIterator
 {
 
-	//typedef Tensor<float, 3> out_data_t;
-	//typedef Tensor<float, 2> out_label_t;
 	typedef traits<BatchPNGReader>::out_data_t out_data_t;
 	typedef traits<BatchPNGReader>::out_label_t out_label_t;
 	typedef traits<BatchPNGReader>::data_t it_t;
@@ -92,12 +90,7 @@ struct BatchPNGIterator
 		return _labels;
 	}
 	
-	const Eigen::TensorCwiseUnaryOp <
-		Eigen::internal::bind2nd_op<
-		Eigen::internal::scalar_quotient_op<float, float>>,
-		const Eigen::TensorConversionOp<float, 
-			const Tensor<byte, 3>>>
-	data() {
+	auto data() {
 		imread_bulk(_begin, _begin + _batch, _images);
 		return _images.cast<float>() / 255.0f;
 	}

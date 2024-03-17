@@ -78,6 +78,25 @@ template<> struct traits<PoolingLayer>
     inline constexpr static std::string_view description = "Pooling Layer";
 };
 
+// Cost Function traits
+class MSE;
+template<> struct traits <MSE>
+{
+    typedef std::array<Index, 2> shape_t;
+};
+
+class CrossEntropy;
+template<> struct traits <CrossEntropy>
+{
+    typedef std::array<Index, 2> shape_t;
+};
+
+template<size_t N> class DummyCost;
+template<size_t N> struct traits <DummyCost<N>>
+{
+    typedef std::array<Index, N + 1> shape_t;
+};
+
 // Reader traits
 class BatchPNGReader;
 struct BatchPNGIterator;

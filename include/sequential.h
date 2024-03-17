@@ -23,8 +23,8 @@ class Sequential2
     ThreadPool* _pool;
     Eigen::ThreadPoolDevice* _device;
 public:
-    Sequential2(std::initializer_list<BaseLayer*> layers, CostFun* cost, 
-        std::array<Index, num_dims_in> in_shape, std::array<Index, num_dims_out> out_shape)
+    Sequential2(std::initializer_list<BaseLayer*> layers, std::array<Index, num_dims_in> in_shape, 
+        std::array<Index, num_dims_out> out_shape, CostFun* cost = new DummyCost<num_dims_out>())
     :_layers{layers}, _cost{cost}, num_layers{_layers.size() + 2},
     _in_shape{in_shape}, _out_shape{out_shape}{
         
@@ -36,7 +36,7 @@ public:
 
         // Add input and output layers
         _layers.insert(_layers.begin(), new InputLayer(_in_shape));
-        _layers.push_back(new OutputLayer(_out_shape));
+        _layers.push_back(new OutputLayer(_out_shape, cost));
 
         // connect forward
         _layers[0]->_prev = nullptr;
@@ -60,13 +60,14 @@ public:
             _layers[i]->init(batch_size);
         }
     }
-    void bkwProp(const out_batch_t& output){
+    void bkwProp(out_batch_t& output){
         BaseLayer* layer = _layers.back();
-        layer->bwd(TensorWrapper(
-            _cost->grad((layer->get_act()).get(output.dimensions()), output)
-            ),
-            _device
-        );
+        layer->bwd(TensorWrapper(output), _device);
+        //layer->bwd(TensorWrapper(
+        //    _cost->grad((layer->get_act()).get(output.dimensions()), output)
+        //    ),
+        //    _device
+        //);
         layer = layer->prev();
 
         while(layer){
@@ -74,7 +75,7 @@ public:
             layer = layer->prev();
         }
     }
-    void fwdProp(const in_batch_t& input){
+    void fwdProp(in_batch_t& input){
         BaseLayer* layer = _layers.front();
         layer->fwd(TensorWrapper(input), _device);
         layer = layer->next();
@@ -83,8 +84,8 @@ public:
             layer = layer->next();
         }
     }
-    void bkwProp(const out_batch_t&& output){bkwProp(output);}
-    void fwdProp(const in_batch_t&& input){fwdProp(input);}
+    void bkwProp(out_batch_t&& output){bkwProp(output);}
+    void fwdProp(in_batch_t&& input){fwdProp(input);}
    
     template<class reader>
     void SGD(reader& train_reader, int epochs, float lr,

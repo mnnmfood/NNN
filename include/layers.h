@@ -7,6 +7,7 @@
 #include "typedefs.h"
 #include "eigenFuns.h"
 #include "layer_traits.h"
+#include "costs.h"
 
 inline const std::array<int, 1> dims_colwise {0};
 inline const std::array<int, 1> dims_rowwise {1};
@@ -144,6 +145,16 @@ public:
         assert(_next != nullptr);
         return _next->get_grad().get(_out_batch_shape);
     }
+    
+    TensorWrapper<float> prev_act_wrap() {
+        assert(_prev != nullptr);
+        return _prev->get_act();
+    }
+
+    TensorWrapper<float> next_grad_wrap() {
+        assert(_next != nullptr);
+        return _prev->get_grad();
+    }
 };
 
 template<size_t N>
@@ -176,24 +187,34 @@ class OutputLayer: public Layer<OutputLayer<N>>
 {
     typedef typename traits<InputLayer<N>>::out_shape_t out_shape_t;
     using out_t = Tensor<float, std::tuple_size<out_shape_t>{}+1>;
+    CostFun* _cost;
 public:
     const size_t _size = 0;
-    OutputLayer(std::array<Index, N> shape):
-        Layer<OutputLayer<N>>{shape, shape}
+    OutputLayer(std::array<Index, N> shape, CostFun* cost):
+        Layer<OutputLayer<N>>{shape, shape}, _cost{cost}
     {
     }
     void init(Index n_samples){
         this->_out_batch_shape.back() = n_samples;
         this->_in_batch_shape.back() = n_samples;
+        this->_act = out_t(_out_batch_shape);
+        this->_grad = in_t(_in_batch_shape);
+        _cost->init(TensorShape(_out_batch_shape));
     }
     void initParams(){}
     void fwd(ThreadPoolDevice* device=nullptr){
-      this->_act = this->prev_act();  
+        _cost->act(this->prev_act_wrap(), TensorWrapper<float>(this->_act),
+            device);
+        //std::cout << this->_act.dimensions() << "\n\n";
+        //std::cout << this->_act.chip(0, N) << "\n\n";
     }
     void fwd(TensorWrapper<float>&& input, ThreadPoolDevice* device=nullptr){}
     void bwd(ThreadPoolDevice* device=nullptr){};
     void bwd(TensorWrapper<float>&& output, ThreadPoolDevice* device=nullptr){
-        this->_grad = output.get(this->_out_batch_shape);
+        _cost->grad(this->get_act(), output, TensorWrapper<float>(this->_grad),
+            device);
+        //std::cout << this->_grad.dimensions() << "\n\n";
+        //std::cout << this->_grad.chip(0, N) << "\n\n";
     }
 };
 
