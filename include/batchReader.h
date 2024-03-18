@@ -33,8 +33,7 @@ public:
 	}
 	it end() {
 		// address used to stop iteration
-		int misal = _total_size % _batch;
-		int last_idx = misal == 0 ? _total_size : _total_size - _batch + misal;
+		int last_idx = _total_size - _total_size % _batch;
 		return static_cast<Derived*>(this)->iter(_data + last_idx, _batch);
 	}
 

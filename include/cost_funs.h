@@ -67,6 +67,7 @@ cross_entropy_grad_fun(ArgType1& input, ArgType2& output, ArgType3& grad,
             output * input.inverse();
     }
 }
+
 }
 
 #endif

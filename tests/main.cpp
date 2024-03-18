@@ -25,7 +25,7 @@
 int main() {
     std::string dataDir = xstr(DATA_DIR);
 
-#if 1
+#if 0
     std::cout << " --TESTING PNG" << "\n";
     testPNG(dataDir);
 
@@ -54,12 +54,12 @@ int main() {
         },
         std::array<Index, 1>{784},
         std::array<Index, 1>{10},
-        new CrossEntropy()
+        new MSE()
     );
-    std::cout << "--TESTING Mnist Data" << "\n";
-    int epochs = 10;
-    int batch_size = 20;
-    float learning_rate = 0.1;
+    std::cout << " --TESTING Mnist Data" << "\n";
+    int epochs = 2;
+    int batch_size = 1000;
+    float learning_rate = 0.5;
     float momentum = 0.0;
     std::string trainDir = dataDir + "mnist_png/training";
     std::string testDir = dataDir + "mnist_png/testing";

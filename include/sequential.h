@@ -100,7 +100,9 @@ public:
             train_reader.reset();
             timer.start();
             auto end = train_reader.end();
+            int ki = 0;
             for (auto it = train_reader.begin(); it != end; it++) {
+                ki++;
                 fwdProp(it.data());
                 bkwProp(it.labels());
                 for (size_t i{ 0 }; i < num_layers; i++) {
