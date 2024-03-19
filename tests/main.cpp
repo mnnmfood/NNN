@@ -25,7 +25,7 @@
 int main() {
     std::string dataDir = xstr(DATA_DIR);
 
-#if 0
+#if 1
     std::cout << " --TESTING PNG" << "\n";
     testPNG(dataDir);
 
@@ -57,8 +57,8 @@ int main() {
         new MSE()
     );
     std::cout << " --TESTING Mnist Data" << "\n";
-    int epochs = 2;
-    int batch_size = 1000;
+    int epochs = 10;
+    int batch_size = 128;
     float learning_rate = 0.5;
     float momentum = 0.0;
     std::string trainDir = dataDir + "mnist_png/training";

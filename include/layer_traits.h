@@ -113,7 +113,9 @@ struct BatchCSVIterator;
 template<> struct traits <BatchCSVReader>
 {
     typedef BatchCSVIterator iterator;
-    typedef std::pair<Index, Index> data_t;
+    typedef std::pair<
+        std::pair<Index, Index>,
+		std::pair<Index, Index>> data_t;
     typedef Tensor<float, 2> out_data_t;
     typedef Tensor<float, 2> out_label_t;
 };

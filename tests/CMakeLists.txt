@@ -11,4 +11,5 @@ target_include_directories(tests PUBLIC
 						"${PROJECT_SOURCE_DIR}/tests"
 						"${EIGEN_LIB}"
 						"${PNG_LIB}"
+						"${Boost_INCLUDE_DIR}"
 						)

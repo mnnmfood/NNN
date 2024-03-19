@@ -16,11 +16,14 @@ This repo also contains a custom made wrapper around [libpng](http://www.libpng.
   - Eigen 3.4.0
   - libpng 1.2.56  
   - zlib 1.3
-## How to build the examples
-Make sure the required static libraries (libpng.a and libz.a) as well as the header files (eigen-3.4.0/ and png.h) are in the PATH.
+  - Boost 
+
+## Building
 ```
 cd build
 cmake ../
 cmake --build .
 ./tests
 ```
+The result of the build is two static libraries: src.lib and pngwrapper.lib. Before building make sure that the required packages (eigen-3.4.0/, png.h, boost/) 
+as well as the required static libraries (libpng.lib and zlib.lib) are in the PATH.

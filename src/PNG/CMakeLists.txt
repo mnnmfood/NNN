@@ -1,4 +1,3 @@
-include(CMakePrintHelpers)
 file(GLOB PNG_FILES *.cpp)
 add_library(pngwrapper "${PNG_FILES}")
 
