@@ -116,36 +116,6 @@ public:
             std::cout << "Time: " << timer.elapsedMilliseconds() << "ms\n";
         }
     }
-#if 0 
-    void SGD(BatchPNGReader train_reader, int epochs, float lr,
-        float mu, BatchPNGReader val_reader){
-        Timer timer;
-        //Tensor<float, 2> labels;
-        //Tensor<byte, 3> images;
-        for(int k{0}; k < epochs; k++){
-            init(train_reader.batch());
-            train_reader.reset();
-            timer.start();
-            auto end = train_reader.end();
-            for(auto it=train_reader.begin(); it!=end; it++){
-                //train_reader.get(labels, images);
-                fwdProp(it.images().cast<float>());
-                bkwProp(it.labels());
-                //fwdProp(images.cast<float>());
-                //bkwProp(labels);
-                for(size_t i{0}; i < num_layers; i++){
-                    _layers[i]->update(lr, mu, train_reader.batch());                
-                }
-            }
-			timer.stop();
-            std::cout << "Epoch " << k + 1 << "\n";
-			float cost_t = accuracy(val_reader);
-			std::cout << "Accuracy: " << cost_t*100 << " %" << "\n";
-            std::cout << "Time: " << timer.elapsedMilliseconds() << "ms\n";
-        }
-
-    }
-#endif
 
     void SGD(in_batch_t& x, out_batch_t& y, int epochs, int batch_size, 
         float lr, float mu, in_batch_t& val_x, out_batch_t& val_y){

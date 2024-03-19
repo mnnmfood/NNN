@@ -44,25 +44,27 @@ int main() {
 
 #endif
     // model architecture
+    bool with_softmax = true;
     Sequential2 model({
-        //new ReshapeLayer<1, 4>(std::array<Index, 4>{1, 28, 28, 1}),
-        //new ConvolLayer(std::array<Index, 3>{5, 3, 3}),
-        //new PoolingLayer(std::array<Index, 2>{3, 3}, 3),
+        new ReshapeLayer<1, 4>(std::array<Index, 4>{1, 28, 28, 1}),
+        new ConvolLayer(std::array<Index, 3>{5, 3, 3}),
+        new PoolingLayer(std::array<Index, 2>{3, 3}, 3),
+        new ConvolLayer(std::array<Index, 3>{5, 3, 3}),
+        new PoolingLayer(std::array<Index, 2>{3, 3}, 1),
         new FlattenLayer(),
-        new SigmoidLayer(128),
         new SigmoidLayer(10),
         },
         std::array<Index, 1>{784},
         std::array<Index, 1>{10},
-        new MSE()
+        new CrossEntropy(with_softmax)
     );
     std::cout << " --TESTING Mnist Data" << "\n";
     int epochs = 10;
     int batch_size = 128;
-    float learning_rate = 0.5;
+    float learning_rate = 0.1;
     float momentum = 0.0;
-    std::string trainDir = dataDir + "mnist_png/training";
-    std::string testDir = dataDir + "mnist_png/testing";
+    //std::string trainDir = dataDir + "mnist_png/training";
+    //std::string testDir = dataDir + "mnist_png/testing";
     //BatchPNGReader train_reader(trainDir, batch_size);
     //BatchPNGReader test_reader(testDir, 100);
     BatchCSVReader train_reader(
@@ -72,7 +74,7 @@ int main() {
     BatchCSVReader test_reader(
         dataDir + "mnist_csv/val_x.csv", 
         dataDir + "mnist_csv/val_y.csv", 
-        100);
+        1000);
     std::cout << "Training Size:" << train_reader.size() << "\n";
     std::cout << "Testing Size:" << test_reader.size() << "\n";
     model.SGD(train_reader, epochs, learning_rate, momentum, test_reader);

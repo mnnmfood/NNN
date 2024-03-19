@@ -103,7 +103,9 @@ public:
 class CrossEntropy : public CostFunTempl<CrossEntropy>
 {
     typedef TensorMap<Tensor<float, 2>> tmap_t;
+    bool _softmax;
 public:
+    CrossEntropy(bool softmax=true) :_softmax{ softmax } {}
     Tensor<float, 0> cost(tmap_t a,
         tmap_t y, ThreadPoolDevice*);
 

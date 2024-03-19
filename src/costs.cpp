@@ -30,14 +30,14 @@ void MSE::act(tmap_t z,
 
 Tensor<float, 0> CrossEntropy::cost(tmap_t a, 
             tmap_t y, ThreadPoolDevice* device){
-    return cross_entropy_fun(a, y, device);
+    return cross_entropy_fun(a, y, device, _softmax);
     //return -a.binaryExpr(y, std::ref(cross_entropy)).sum();
 }
 
 void CrossEntropy::grad(tmap_t a,
     tmap_t y, tmap_t grad,
     ThreadPoolDevice* device){ 
-    cross_entropy_grad_fun(a, y, grad, device);
+    cross_entropy_grad_fun(a, y, grad, device, _softmax);
     //std::cout << a.chip(0, 1) << "\n\n";
     //std::cout << y.chip(0, 1) << "\n\n";
     //std::cout << grad.chip(0, 1) << "\n\n";
@@ -45,9 +45,10 @@ void CrossEntropy::grad(tmap_t a,
 
 void CrossEntropy::act(tmap_t z, 
     tmap_t act, ThreadPoolDevice* device) {
-    softmax_fun(z, act, device);
-    //std::cout << z.dimensions() << "\n\n";
-    //std::cout << z.chip(0, 1) << "\n\n";
-    //std::cout << act.chip(0, 1) << "\n\n";
-    //act = z;
+    if (_softmax) {
+        softmax_fun(z, act, device);
+    }
+    else {
+        act.device(*device) = z;
+    }
 }
