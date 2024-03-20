@@ -206,6 +206,28 @@ void testTanh(int size, int batch, ThreadPoolDevice* device) {
 	}
 }
 
+void testReLu(int size, int batch, ThreadPoolDevice* device) {
+	Tensor<float, 2> input(size, batch);
+	input.setRandom();
+	input = input - 0.5f;
+	Tensor<float, 2> output(size, batch);
+	relu_fun(input, output, device);
+	for (int b{ 0 }; b < batch; b++) {
+		for (int i{ 0 }; i < size; i++) {
+			float expected = std::max(input(i, b), 0.0f);
+			AssertAprox(output(i, b), expected, "tanh");
+		}
+	}
+	relu_grad_fun(input, output, device);
+	for (int b{ 0 }; b < batch; b++) {
+		for (int i{ 0 }; i < size; i++) {
+			float expected = input(i, b) > 0 ? 1: 0;
+			AssertAprox(output(i, b), expected, "tanh grad");
+		}
+	}
+
+}
+
 void testMSE(int size, int batch, ThreadPoolDevice* device) {
 	Tensor<float, 2> input(size, batch);
 	input.setRandom();
@@ -275,7 +297,9 @@ void testCrossEntropy(int size, int batch, ThreadPoolDevice* device) {
 			AssertAprox(grad2(i, b), expected, "MSE grad");
 		}
 	}
+
 }
+
 
 void testAllOps() {
 
@@ -294,10 +318,11 @@ void testAllOps() {
 		testSoftMax(size, batch, &device);
 		testSigmoid(size, batch, &device);
 		testTanh(size, batch, &device);
+		testReLu(size, batch, &device);
 
 		testMSE(size, batch, &device);
 		testCrossEntropy(size, batch, &device);
-		std::cout << "Sucess\n";
+		std::cout << "Sucess\n\n";
 }
 
 #endif

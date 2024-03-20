@@ -330,6 +330,7 @@ public:
 class TanhLayer: public FCLayer
 {
 public:
+    TanhLayer(Index size); 
     void act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
     void grad_act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
 };
@@ -337,6 +338,15 @@ public:
 class SoftMaxLayer: public FCLayer
 {
 public:
+    SoftMaxLayer(Index size); 
+    void act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
+    void grad_act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
+};
+
+class ReLuLayer: public FCLayer
+{
+public:
+    ReLuLayer(Index size); 
     void act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
     void grad_act(const Tensor<float, 2>&, Tensor<float, 2>&, ThreadPoolDevice*);
 };

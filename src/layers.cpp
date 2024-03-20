@@ -105,6 +105,8 @@ SigmoidLayer::grad_act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadP
 }
 
 // Tanh Layer
+
+TanhLayer::TanhLayer(Index size) :FCLayer{size}{}
 void
 TanhLayer::act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
     tanh_fun(z, out, device);
@@ -116,6 +118,8 @@ TanhLayer::grad_act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPool
 }
 
 // SoftMax Layer
+SoftMaxLayer::SoftMaxLayer(Index size) :FCLayer{size}{}
+
 void
 SoftMaxLayer::act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
     softmax_fun(z, out, device);
@@ -124,6 +128,19 @@ SoftMaxLayer::act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDe
 void
 SoftMaxLayer::grad_act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
     softmax_grad_fun(z, out, device);
+}
+
+// ReLu Layer
+ReLuLayer::ReLuLayer(Index size) :FCLayer{size}{}
+
+void
+ReLuLayer::act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
+    relu_fun(z, out, device);
+}
+
+void
+ReLuLayer::grad_act(const Tensor<float, 2>& z, Tensor<float, 2>& out, ThreadPoolDevice* device){
+    relu_grad_fun(z, out, device);
 }
 
 // Convolutional layer

@@ -25,7 +25,6 @@
 int main() {
     std::string dataDir = xstr(DATA_DIR);
 
-#if 1
     std::cout << " --TESTING PNG" << "\n";
     testPNG(dataDir);
 
@@ -39,10 +38,9 @@ int main() {
     testFeedFwd();
     std::cout << "--TESTING Backwards-propagation" << "\n";
     testBackProp();
-    std::cout << "--TESTING Convolution Ops" << "\n";
+    std::cout << "--TESTING Eigen Ops" << "\n";
     testAllOps();
 
-#endif
     // model architecture
     bool with_softmax = true;
     Sequential2 model({
