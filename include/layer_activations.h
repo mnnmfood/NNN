@@ -61,5 +61,21 @@ void softmax_grad_fun(const Tensor<Scalar, 2>& input, Tensor<Scalar, 2>& grad, T
     grad.device(*device) = (grad - grad * grad).eval();
 }
 
+template<typename ArgType1, typename ArgType2>
+void relu_fun(ArgType1& input, ArgType2& output, ThreadPoolDevice* device) {
+    typedef internal::traits<ArgType1>::Scalar Scalar;
+    output.device(*device) = (input + input.abs()) / Scalar(2.0f);
+}
+
+template<typename ArgType1, typename ArgType2>
+void relu_grad_fun(ArgType1& input, ArgType2& output, ThreadPoolDevice* device) {
+	constexpr Index N = internal::traits<ArgType1>::NumDimensions;
+	typedef internal::traits<ArgType1>::Scalar Scalar;
+	auto comparer = [](Scalar a) -> Scalar{return static_cast<Scalar>(a > 0); };
+	output.device(*device) = input.unaryExpr(comparer);
+}
+
+
+
 }
 #endif
